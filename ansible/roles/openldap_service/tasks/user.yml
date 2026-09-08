@@ -1,0 +1,39 @@
+---
+- name: Create OpenLDAP service user
+  ansible.builtin.user:
+    name: "{{ openldap_service_user }}"
+    comment: OpenLDAP service user
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Get OpenLDAP service user details
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ openldap_service_user }}"
+  register: openldap_service_user_info
+
+- name: Set OpenLDAP service user facts
+  ansible.builtin.set_fact:
+    openldap_service_user_uid: >-
+      {{ openldap_service_user_info.ansible_facts
+         .getent_passwd[openldap_service_user][1] }}
+    openldap_service_home_dir: >-
+      {{ openldap_service_user_info.ansible_facts
+         .getent_passwd[openldap_service_user][4] }}
+
+- name: Enable lingering for the OpenLDAP service user
+  ansible.builtin.command:
+    cmd: "loginctl enable-linger {{ openldap_service_user }}"
+  changed_when: false
+
+- name: Ensure the OpenLDAP user systemd instance is running
+  ansible.builtin.systemd:
+    name: "user@{{ openldap_service_user_uid }}.service"
+    state: started
+    scope: system
+
+- name: Wait for the OpenLDAP user bus socket
+  ansible.builtin.wait_for:
+    path: "/run/user/{{ openldap_service_user_uid }}/bus"
+    timeout: 30

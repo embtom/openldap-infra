@@ -1,0 +1,13 @@
+dn: {{ openldap_config_base_dn }}
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: {{ openldap_config_organization }}
+dc: {{ openldap_config_base_dn | regex_replace('^dc=([^,]+).*$','\\1') }}
+
+dn: cn=admin,{{ openldap_config_base_dn }}
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+description: LDAP administrator
+userPassword: {{ openldap_config_admin_password | password_hash('sha512') }}
