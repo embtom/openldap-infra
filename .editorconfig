@@ -1,0 +1,49 @@
+# https://editorconfig.org
+
+root = true
+
+# Global defaults for all project files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Ansible Playbooks, Tasks, Roles, Vars, and Handlers
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+# Jinja2 Templates (used for config templating in Ansible)
+[*.{j2,jinja2}]
+indent_style = space
+indent_size = 2
+
+# Shell scripts (hooks, dynamic inventories, wrapper scripts)
+[*.sh]
+indent_style = space
+indent_size = 2
+
+# Python files (custom plugins, filter plugins, modules)
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 88
+
+# Markdown files (project documentation)
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# GitLab CI pipeline configuration
+[.gitlab-ci.yml]
+indent_style = space
+indent_size = 2
+
+# Makefiles (if your project uses make for automation)
+[Makefile]
+indent_style = tab

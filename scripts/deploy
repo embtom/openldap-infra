@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+HOST=""
+TAG=""
+LDAP_ADMIN_PASSWORD="${OPENLDAP_CONFIG_ADMIN_PASSWORD:-}"
+
+usage() {
+  cat <<EOF
+Usage: $0 [--host HOST] [--tag TAG]
+
+  -H, --host HOST   Deploy to a remote host over SSH (default: localhost)
+  -t, --tag TAG     Run only the specified Ansible tag
+      --help        Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -H | --host)
+    HOST="${2:?Missing host value}"
+    shift 2
+    ;;
+  -t | --tag)
+    TAG="${2:?Missing tag value}"
+    shift 2
+    ;;
+  --help)
+    usage
+    exit 0
+    ;;
+  *)
+    TAG="$1"
+    shift
+    ;;
+  esac
+done
+
+case "${HOST}" in
+"" | localhost | 127.0.0.1 | ::1)
+  LIMIT=(--limit localhost)
+  HOST_ARGS=()
+  ;;
+*)
+  LIMIT=(--limit remote)
+  HOST_ARGS=(--extra-vars "ansible_host=${HOST}")
+  ;;
+esac
+
+TAG_ARGS=()
+if [[ -n "${TAG}" ]]; then
+  TAG_ARGS=(--tags "${TAG}")
+fi
+
+(
+  cd "${SCRIPT_DIR}/../ansible"
+  ansible-playbook \
+    --inventory inventories/hosts.yml \
+    playbooks/openldap_setup.yml \
+    --ask-become-pass \
+    "${LIMIT[@]}" \
+    "${HOST_ARGS[@]}" \
+    --extra-vars "openldap_config_admin_password=${LDAP_ADMIN_PASSWORD}" \
+    "${TAG_ARGS[@]}"
+)

@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "ERROR: This script must be run as root (use sudo)." >&2
+  exit 1
+fi
+
+openldap_service_user="${1:-openldap}"
+openldap_service_name="${2:-openldap}"
+openldap_data_dir="${3:-/var/lib/openldap/data}"
+openldap_config_dir="${4:-/var/lib/openldap/config}"
+openldap_schema_dir="${5:-/var/lib/openldap/schema}"
+openldap_tls_dir="${6:-/var/lib/openldap/tls}"
+
+if ! id "$openldap_service_user" >/dev/null 2>&1; then
+  echo "ERROR: User '$openldap_service_user' does not exist." >&2
+  exit 1
+fi
+
+openldap_service_uid="$(id -u "$openldap_service_user")"
+openldap_quadlet_file="/etc/containers/systemd/users/${openldap_service_uid}/${openldap_service_name}.container"
+openldap_rootless_ports_file="/etc/sysctl.d/90-openldap-rootless-ports.conf"
+
+read -rp \
+  "==> This will permanently delete OpenLDAP data, configuration, schemas, TLS files, the '${openldap_service_name}' container, and user '${openldap_service_user}'. Continue? [y/N] " \
+  confirm
+
+case "${confirm,,}" in
+y | yes) ;;
+*)
+  echo "Aborted."
+  exit 0
+  ;;
+esac
+
+echo
+echo "==> Stopping OpenLDAP service and removing its container"
+
+runuser -u "$openldap_service_user" -- \
+  env XDG_RUNTIME_DIR="/run/user/${openldap_service_uid}" \
+  systemctl --user disable --now "${openldap_service_name}.service" || true
+runuser -u "$openldap_service_user" -- \
+  podman rm --force "$openldap_service_name" || true
+
+echo
+echo "==> Terminating user session"
+
+loginctl disable-linger "$openldap_service_user" 2>/dev/null || true
+loginctl terminate-user "$openldap_service_user" 2>/dev/null || true
+
+echo
+echo "==> Removing OpenLDAP Quadlet definition"
+
+rm -f -- "$openldap_quadlet_file"
+rmdir --ignore-fail-on-non-empty -- \
+  "/etc/containers/systemd/users/${openldap_service_uid}" || true
+
+echo
+echo "==> Removing OpenLDAP rootless ports configuration"
+
+rm -f -- "$openldap_rootless_ports_file"
+
+echo
+echo "==> Removing user '$openldap_service_user'"
+
+userdel -r "$openldap_service_user"
+
+echo
+for openldap_storage_dir in \
+  "$openldap_data_dir" \
+  "$openldap_config_dir" \
+  "$openldap_schema_dir" \
+  "$openldap_tls_dir"; do
+  echo "==> Removing OpenLDAP storage directory '$openldap_storage_dir'"
+
+  resolved_storage_dir="$(realpath -m -- "$openldap_storage_dir")"
+  if [[ -z "$resolved_storage_dir" || "$resolved_storage_dir" == "/" ]]; then
+    echo "ERROR: Refusing to remove unsafe storage directory: '$openldap_storage_dir'" >&2
+    exit 1
+  fi
+
+  rm -rf -- "$resolved_storage_dir"
+done
+
+echo
+echo "==> Cleanup complete."

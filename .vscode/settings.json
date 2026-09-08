@@ -1,0 +1,31 @@
+{
+  // 1. Give .editorconfig high priority over local editor settings
+  "editorconfig.template": ".editorconfig",
+  // 2. Automatically format files on save using .editorconfig rules
+  "editor.formatOnSave": true,
+  // 3. Ensure native VS Code features respect EditorConfig settings
+  "editor.detectIndentation": true,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  // 4. Clean up whitespace settings native to VS Code
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.eol": "\n",
+  // 5. Explicitly enable YAML/Ansible formatting (requires redhat.vscode-yaml extension)
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "[ansible]": {
+    "editor.defaultFormatter": "redhat.ansible",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+  }
+}
