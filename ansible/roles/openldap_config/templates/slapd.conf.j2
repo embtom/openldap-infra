@@ -17,7 +17,7 @@ database        mdb
 maxsize         1073741824
 suffix          "{{ openldap_config_base_dn }}"
 rootdn          "cn=admin,{{ openldap_config_base_dn }}"
-rootpw          {{ openldap_config_admin_password | password_hash('sha512') }}
+rootpw          {CRYPT}{{ openldap_config_admin_password | password_hash('sha512') }}
 directory       /var/lib/ldap
 index           objectClass eq
 index           cn,sn,uid eq,pres,sub

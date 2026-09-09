@@ -10,4 +10,4 @@ objectClass: simpleSecurityObject
 objectClass: organizationalRole
 cn: admin
 description: LDAP administrator
-userPassword: {{ openldap_config_admin_password | password_hash('sha512') }}
+userPassword: {CRYPT}{{ openldap_config_admin_password | password_hash('sha512') }}

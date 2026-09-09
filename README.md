@@ -38,6 +38,30 @@ The `openldap_config` role generates the `slapd.conf` consumed by the
 container. It configures the database, base DN, administrator credentials,
 standard schemas, TLS, and custom-schema include path.
 
+## Test LDAP
+
+Query the root DSE and verify that the service responds with its configured
+base DN:
+
+```sh
+./scripts/test-openldap
+```
+
+For a remote server or a non-default port, specify the target explicitly:
+
+```sh
+./scripts/test-openldap --host ldap.example.org --port 389
+```
+
+Test an authenticated administrator bind and list the configured directory:
+
+```sh
+./scripts/test-openldap-admin
+```
+
+The script prompts for the administrator password. Use `--base-dn` when the
+deployment does not use the default `dc=example,dc=org` base DN.
+
 ## Custom schemas
 
 Declare custom schema files with the `openldap_schema` role in inventory.
