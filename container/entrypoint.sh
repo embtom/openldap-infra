@@ -15,11 +15,8 @@ if [ ! -r "$bootstrap_file" ]; then
   exit 1
 fi
 
-chown openldap:openldap /run/slapd /var/lib/ldap
-
 if [ ! -f "$database_file" ]; then
   slapadd -f "$config_file" -n 1 -l "$bootstrap_file"
-  chown -R openldap:openldap /var/lib/ldap
 fi
 
 if [ "$#" -gt 0 ]; then
