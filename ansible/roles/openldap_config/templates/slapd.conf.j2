@@ -1,0 +1,23 @@
+include         /etc/ldap/schema/core.schema
+include         /etc/ldap/schema/cosine.schema
+include         /etc/ldap/schema/nis.schema
+include         /etc/ldap/schema/inetorgperson.schema
+{% for schema in openldap_config_schemas %}
+include         /etc/ldap/custom-schema/{{ schema.filename }}
+{% endfor %}
+pidfile         /run/slapd/slapd.pid
+argsfile        /run/slapd/slapd.args
+modulepath      /usr/lib/ldap
+moduleload      back_mdb
+{% if openldap_config_tls_enabled | bool %}
+TLSCertificateFile /tls/tls.crt
+TLSCertificateKeyFile /tls/tls.key
+{% endif %}
+database        mdb
+maxsize         1073741824
+suffix          "{{ openldap_config_base_dn }}"
+rootdn          "cn=admin,{{ openldap_config_base_dn }}"
+rootpw          {CRYPT}{{ openldap_config_admin_password | password_hash('sha512') }}
+directory       /var/lib/ldap
+index           objectClass eq
+index           cn,sn,uid eq,pres,sub

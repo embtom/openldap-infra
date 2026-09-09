@@ -1,0 +1,62 @@
+---
+- name: Get OpenLDAP Git top-level directory
+  ansible.builtin.command: git rev-parse --show-toplevel
+  register: openldap_service_git_topdir
+  changed_when: false
+  delegate_to: localhost
+  become: false
+
+
+- name: Remove existing local OpenLDAP image
+  containers.podman.podman_image:
+    name: "{{ openldap_service_image }}"
+    state: absent
+    force: true
+  delegate_to: localhost
+  become: false
+  when: openldap_service_force_rebuild | bool
+
+- name: Build OpenLDAP image locally
+  ansible.builtin.command:
+    cmd: >-
+      podman build --tag {{ openldap_service_image | quote }}
+      --file {{ (openldap_service_git_topdir.stdout | trim ~ '/'
+                 ~ openldap_service_containerfile) | quote }}
+      {{ openldap_service_build_extra_args }}
+      {{ (openldap_service_git_topdir.stdout | trim ~ '/'
+          ~ openldap_service_build_context) | quote }}
+  changed_when: true
+  delegate_to: localhost
+  become: false
+
+- name: Export locally built OpenLDAP image
+  containers.podman.podman_save:
+    image: "{{ openldap_service_image }}"
+    dest: "/tmp/openldap-service-image.tar"
+  delegate_to: localhost
+  become: false
+
+- name: Copy OpenLDAP image archive to target host
+  ansible.builtin.copy:
+    src: /tmp/openldap-service-image.tar
+    dest: /tmp/openldap-service-image.tar
+    mode: "0644"
+
+- name: Load OpenLDAP image into service user storage
+  become: true
+  become_user: "{{ openldap_service_user }}"
+  containers.podman.podman_load:
+    input: /tmp/openldap-service-image.tar
+
+- name: Remove OpenLDAP image archive from target host
+  become: true
+  ansible.builtin.file:
+    path: /tmp/openldap-service-image.tar
+    state: absent
+
+- name: Remove local OpenLDAP image archive
+  ansible.builtin.file:
+    path: /tmp/openldap-service-image.tar
+    state: absent
+  delegate_to: localhost
+  become: false

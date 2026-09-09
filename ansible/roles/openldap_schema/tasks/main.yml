@@ -1,0 +1,35 @@
+---
+- name: Validate OpenLDAP schema settings
+  ansible.builtin.assert:
+    that:
+      - openldap_schema_dir is match('^/.+')
+      - openldap_schema_dir != '/'
+    fail_msg: Set a non-root absolute openldap_schema_dir.
+
+- name: Validate OpenLDAP custom schemas
+  ansible.builtin.assert:
+    that:
+      - item.filename is match('^[A-Za-z0-9][A-Za-z0-9_.-]*[.]schema$')
+      - item.content is defined
+    fail_msg: Schema filenames must end in .schema and have content.
+  loop: "{{ openldap_schema_schemas }}"
+
+- name: Create OpenLDAP schema directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ openldap_schema_dir }}"
+    state: directory
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0750"
+
+- name: Deploy OpenLDAP custom schemas
+  become: true
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
+    dest: "{{ openldap_schema_dir }}/{{ item.filename }}"
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0644"
+  loop: "{{ openldap_schema_schemas }}"
+  notify: Restart OpenLDAP service

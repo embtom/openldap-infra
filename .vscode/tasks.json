@@ -1,0 +1,106 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ansible: install",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/install-requirements && ${workspaceFolder}/scripts/install-ansible",
+      "problemMatcher": []
+    },
+    {
+      "label": "ansible: lint",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/ansible-lint",
+      "problemMatcher": [
+        {
+          "owner": "yamllint",
+          "fileLocation": "absolute",
+          "severity": "error",
+          "pattern": {
+            "regexp": "^(.+):(\\d+):(\\d+): \\[(error|warning)\\] (.+)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          }
+        },
+        {
+          "owner": "ansible-lint",
+          "fileLocation": "absolute",
+          "pattern": [
+            {
+              "regexp": "^([\\w-]+(?:\\[[\\w-]+\\])?): (.+)$",
+              "message": 2
+            },
+            {
+              "regexp": "^(.+):(\\d+)(?::(\\d+))? Task/Handler:",
+              "file": 1,
+              "line": 2,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ansible: run all roles",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/deploy --host ${input:remoteHost}",
+      "options": {
+        "env": {
+          "OPENLDAP_CONFIG_ADMIN_PASSWORD": "${input:ldapAdminPassword}"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ansible: run by tag",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/deploy --host ${input:remoteHost} --tag ${input:roleTag}",
+      "options": {
+        "env": {
+          "OPENLDAP_CONFIG_ADMIN_PASSWORD": "${input:ldapAdminPassword}"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "roleTag",
+      "type": "pickString",
+      "description": "Select OpenLDAP deployment scope",
+      "options": [
+        "openldap",
+        "config",
+        "schema",
+        "service"
+      ]
+    },
+    {
+      "id": "remoteHost",
+      "type": "promptString",
+      "description": "Remote SSH host or SSH config alias",
+      "default": "localhost"
+    },
+    {
+      "id": "ldapAdminPassword",
+      "type": "promptString",
+      "description": "Enter the LDAP administrator password",
+      "password": true
+    }
+  ]
+}

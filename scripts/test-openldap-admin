@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LDAP_HOST="127.0.0.1"
+LDAP_PORT="389"
+LDAP_BASE_DN="dc=example,dc=org"
+
+usage() {
+  cat <<EOF
+Usage: $0 [--host HOST] [--port PORT] [--base-dn BASE_DN]
+
+  -H, --host HOST       LDAP host to test (default: 127.0.0.1)
+  -p, --port PORT       LDAP port to test (default: 389)
+  -b, --base-dn BASE_DN LDAP base DN (default: dc=example,dc=org)
+      --help            Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -H | --host)
+    LDAP_HOST="${2:?Missing host value}"
+    shift 2
+    ;;
+  -p | --port)
+    LDAP_PORT="${2:?Missing port value}"
+    shift 2
+    ;;
+  -b | --base-dn)
+    LDAP_BASE_DN="${2:?Missing base DN value}"
+    shift 2
+    ;;
+  --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 1
+    ;;
+  esac
+done
+
+LDAP_ADMIN_DN="cn=admin,${LDAP_BASE_DN}"
+
+echo "==> Querying LDAP directory at ldap://${LDAP_HOST}:${LDAP_PORT}"
+ldapsearch -x -LLL -H "ldap://${LDAP_HOST}:${LDAP_PORT}" \
+  -D "$LDAP_ADMIN_DN" -W -b "$LDAP_BASE_DN"

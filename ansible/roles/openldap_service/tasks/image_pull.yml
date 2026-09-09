@@ -1,0 +1,7 @@
+---
+- name: Pull OpenLDAP image from registry
+  become: true
+  become_user: "{{ openldap_service_user }}"
+  containers.podman.podman_image:
+    name: "{{ openldap_service_image }}"
+    state: present

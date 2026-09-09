@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LDAP_HOST="127.0.0.1"
+LDAP_PORT="389"
+
+usage() {
+  cat <<EOF
+Usage: $0 [--host HOST] [--port PORT]
+
+  -H, --host HOST   LDAP host to test (default: 127.0.0.1)
+  -p, --port PORT   LDAP port to test (default: 389)
+      --help        Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -H | --host)
+    LDAP_HOST="${2:?Missing host value}"
+    shift 2
+    ;;
+  -p | --port)
+    LDAP_PORT="${2:?Missing port value}"
+    shift 2
+    ;;
+  --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 1
+    ;;
+  esac
+done
+
+echo "==> Querying LDAP root DSE at ldap://${LDAP_HOST}:${LDAP_PORT}"
+ldapsearch -x -LLL -H "ldap://${LDAP_HOST}:${LDAP_PORT}" \
+  -b "" -s base namingContexts

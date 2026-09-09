@@ -1,0 +1,92 @@
+---
+- name: Validate OpenLDAP deployment settings
+  ansible.builtin.assert:
+    that:
+      - openldap_service_data_dir is match('^/.+')
+      - openldap_service_data_dir != '/'
+    fail_msg: >-
+      Set a non-root absolute data directory.
+
+- name: Permit rootless OpenLDAP standard LDAP ports
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: "{{ openldap_service_unprivileged_port_start }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/90-openldap-rootless-ports.conf
+    sysctl_set: true
+    reload: true
+
+- name: Create and configure OpenLDAP service user
+  become: true
+  block:
+    - name: Include OpenLDAP service user tasks
+      ansible.builtin.include_tasks: user.yml
+
+- name: Validate OpenLDAP container method
+  ansible.builtin.assert:
+    that:
+      - openldap_service_container_method in ['direct-build', 'image-pull']
+    fail_msg: >-
+      openldap_service_container_method must be 'direct-build' or
+      'image-pull'.
+
+- name: Build and transfer OpenLDAP image
+  ansible.builtin.include_tasks: image_build.yml
+  when: openldap_service_container_method == 'direct-build'
+
+- name: Pull OpenLDAP image
+  ansible.builtin.include_tasks: image_pull.yml
+  when: openldap_service_container_method == 'image-pull'
+
+- name: Create OpenLDAP persistent directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0750"
+  loop:
+    - "{{ openldap_service_data_dir }}"
+    - "{{ openldap_config_dir }}"
+
+- name: Create OpenLDAP Quadlet directory
+  become: true
+  ansible.builtin.file:
+    path: "/etc/containers/systemd/users/{{ openldap_service_user_uid }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy OpenLDAP Quadlet container unit
+  become: true
+  ansible.builtin.template:
+    src: openldap.container.j2
+    dest: >-
+      {{ '/etc/containers/systemd/users/' ~ openldap_service_user_uid ~ '/'
+         ~ openldap_service_name ~ '.container' }}
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Reload OpenLDAP user systemd daemon
+  become: true
+  become_user: "{{ openldap_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openldap_service_user_uid }}"
+  ansible.builtin.systemd:
+    scope: user
+    daemon_reload: true
+
+- name: Start and enable OpenLDAP service
+  become: true
+  become_user: "{{ openldap_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openldap_service_user_uid }}"
+  ansible.builtin.systemd:
+    name: "{{ openldap_service_name }}.service"
+    scope: user
+    state: restarted
+    enabled: true

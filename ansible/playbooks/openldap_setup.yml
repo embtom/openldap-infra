@@ -1,0 +1,12 @@
+---
+- name: Set up OpenLDAP
+  hosts: all
+  become: false
+
+  roles:
+    - role: openldap_config
+      tags: [openldap, config]
+    - role: openldap_schema
+      tags: [openldap, schema]
+    - role: openldap_service
+      tags: [openldap, service]

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/../ansible"
+
+USER_BIN="$(python3 -m site --user-base)/bin"
+export PATH="${USER_BIN}:${PATH}"
+
+export PYTHONUNBUFFERED=1
+export ANSIBLE_CONFIG="${SCRIPT_DIR}/../ansible.cfg"
+export ANSIBLE_COLLECTIONS_PATH="${HOME}/.ansible/collections"
+
+SARIF_FILE="${SCRIPT_DIR}/ansible-lint.sarif"
+LINT_FILE="${SCRIPT_DIR}/ansible-lint.out"
+
+GITHUB_FORMAT=false
+REVIEWDOG=false
+
+for arg in "$@"; do
+  case "$arg" in
+  --github-format)
+    GITHUB_FORMAT=true
+    ;;
+  --reviewdog)
+    REVIEWDOG=true
+    ;;
+  esac
+done
+
+EXIT_CODE=0
+
+run_yamllint() {
+  if [[ "${REVIEWDOG}" == "true" ]]; then
+    yamllint --format parsable .
+  elif [[ "${GITHUB_FORMAT}" == "true" ]]; then
+    yamllint --format github .
+  else
+    yamllint .
+  fi
+}
+
+run_ansible_syntax_check() {
+  ansible-playbook --syntax-check --inventory localhost, playbooks/openldap_setup.yml
+}
+
+run_ansible_lint() {
+  if [[ "${REVIEWDOG}" == "true" ]]; then
+    ansible-lint --format=pep8 >"${LINT_FILE}" || true
+  else
+    ansible-lint
+  fi
+}
+
+generate_sarif() {
+  if [[ "${GITHUB_FORMAT}" == "true" ]]; then
+    ansible-lint -f sarif >"${SARIF_FILE}" || true
+  fi
+}
+
+run_yamllint || EXIT_CODE=$?
+run_ansible_syntax_check || EXIT_CODE=$?
+run_ansible_lint || EXIT_CODE=$?
+
+generate_sarif
+
+exit "${EXIT_CODE}"
