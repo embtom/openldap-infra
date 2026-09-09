@@ -51,6 +51,44 @@
     - "{{ openldap_service_data_dir }}"
     - "{{ openldap_config_dir }}"
 
+- name: Create OpenLDAP TLS directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ openldap_service_tls_dir }}"
+    state: directory
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0750"
+  when: openldap_service_tls_enabled | bool
+
+- name: Deploy OpenLDAP TLS certificate chain
+  become: true
+  ansible.builtin.copy:
+    src: >-
+      {{ pki_intermediate_ca_dir ~ '/certs/' ~
+         openldap_service_tls_certificate_name ~ '-fullchain.crt' }}
+    dest: >-
+      {{ openldap_service_tls_dir ~ '/' ~
+         openldap_service_tls_certificate_name ~ '-fullchain.crt' }}
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0644"
+  when: openldap_service_tls_enabled | bool
+
+- name: Deploy OpenLDAP TLS private key
+  become: true
+  ansible.builtin.copy:
+    src: >-
+      {{ pki_intermediate_ca_dir ~ '/private/' ~
+         openldap_service_tls_certificate_name ~ '.key' }}
+    dest: >-
+      {{ openldap_service_tls_dir ~ '/' ~
+         openldap_service_tls_certificate_name ~ '.key' }}
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0600"
+  when: openldap_service_tls_enabled | bool
+
 - name: Create OpenLDAP Quadlet directory
   become: true
   ansible.builtin.file:

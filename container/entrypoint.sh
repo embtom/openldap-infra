@@ -26,4 +26,9 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-exec slapd -d 0 -f "$config_file"
+slapd_urls="ldap:///"
+if grep -q '^TLSCertificateFile ' "$config_file"; then
+  slapd_urls="$slapd_urls ldaps:///"
+fi
+
+exec slapd -d 0 -f "$config_file" -h "$slapd_urls"

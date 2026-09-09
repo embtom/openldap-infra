@@ -1,0 +1,70 @@
+---
+- name: Create controller PKI root directory
+  ansible.builtin.file:
+    path: "{{ pki_controller_root_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+
+- name: Create controller PKI subdirectories
+  ansible.builtin.file:
+    path: "{{ pki_controller_root_dir }}/{{ item.name }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - name: private
+      mode: "0700"
+    - name: csr
+      mode: "0755"
+    - name: certs
+      mode: "0755"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Create root CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ pki_root_ca_key }}"
+    type: RSA
+    size: 4096
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Create root CA CSR
+  community.crypto.openssl_csr:
+    path: "{{ pki_root_ca_csr }}"
+    privatekey_path: "{{ pki_root_ca_key }}"
+    common_name: "{{ pki_root_ca_common_name }}"
+    country_name: "{{ pki_country }}"
+    state_or_province_name: "{{ pki_state }}"
+    organization_name: "{{ pki_organization }}"
+    basic_constraints:
+      - "CA:TRUE"
+      # Permit one intermediate CA while preventing deeper CA chains.
+      - "pathlen:1"
+    basic_constraints_critical: true
+    key_usage:
+      - digitalSignature
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Create self-signed root CA certificate
+  community.crypto.x509_certificate:
+    path: "{{ pki_root_ca_certificate }}"
+    csr_path: "{{ pki_root_ca_csr }}"
+    privatekey_path: "{{ pki_root_ca_key }}"
+    provider: selfsigned
+    selfsigned_not_after: "+3650d"
+    selfsigned_digest: sha256
+  delegate_to: localhost
+  become: false
+  run_once: true

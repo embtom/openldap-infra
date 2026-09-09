@@ -10,8 +10,8 @@ argsfile        /run/slapd/slapd.args
 modulepath      /usr/lib/ldap
 moduleload      back_mdb
 {% if openldap_config_tls_enabled | bool %}
-TLSCertificateFile /tls/tls.crt
-TLSCertificateKeyFile /tls/tls.key
+TLSCertificateFile /tls/{{ openldap_service_tls_certificate_name }}-fullchain.crt
+TLSCertificateKeyFile /tls/{{ openldap_service_tls_certificate_name }}.key
 {% endif %}
 database        mdb
 maxsize         1073741824
