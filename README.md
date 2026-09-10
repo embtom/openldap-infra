@@ -70,7 +70,25 @@ Test an authenticated administrator bind and list the configured directory:
 ```
 
 The script prompts for the administrator password. Use `--base-dn` when the
-deployment does not use the default `dc=example,dc=org` base DN.
+deployment does not use the default `dc=embtom,dc=org` base DN.
+
+## Directory Structure
+
+The initial directory uses `dc=embtom,dc=org` and creates these organizational
+units:
+
+```text
+ou=People
+ou=Groups
+ou=Services
+ou=Computers
+ou=Samba
+```
+
+The configuration includes indexes for POSIX accounts and groups. The initial
+access controls permit password authentication for
+anonymous clients, password changes by account owners, and directory reads by
+authenticated users. The LDAP administrator has full access.
 
 ## Custom schemas
 

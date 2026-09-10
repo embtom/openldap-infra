@@ -11,3 +11,11 @@ objectClass: organizationalRole
 cn: admin
 description: LDAP administrator
 userPassword: {CRYPT}{{ openldap_config_admin_password | password_hash('sha512') }}
+
+{% for organizational_unit in openldap_config_organizational_units %}
+dn: ou={{ organizational_unit }},{{ openldap_config_base_dn }}
+objectClass: top
+objectClass: organizationalUnit
+ou: {{ organizational_unit }}
+
+{% endfor %}

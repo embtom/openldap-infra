@@ -19,5 +19,19 @@ suffix          "{{ openldap_config_base_dn }}"
 rootdn          "cn=admin,{{ openldap_config_base_dn }}"
 rootpw          {CRYPT}{{ openldap_config_admin_password | password_hash('sha512') }}
 directory       /var/lib/ldap
-index           objectClass eq
-index           cn,sn,uid eq,pres,sub
+{% for index in openldap_config_indexes %}
+index           {{ index }}
+{% endfor %}
+access to attrs=userPassword
+	by self write
+	by anonymous auth
+	by dn.exact="cn=admin,{{ openldap_config_base_dn }}" write
+	by * none
+access to attrs=shadowLastChange
+	by self write
+	by dn.exact="cn=admin,{{ openldap_config_base_dn }}" write
+	by * read
+access to *
+	by dn.exact="cn=admin,{{ openldap_config_base_dn }}" write
+	by users read
+	by * none
