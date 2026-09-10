@@ -15,15 +15,17 @@ if [ ! -r "$bootstrap_file" ]; then
   exit 1
 fi
 
-chown openldap:openldap /run/slapd /var/lib/ldap
-
 if [ ! -f "$database_file" ]; then
   slapadd -f "$config_file" -n 1 -l "$bootstrap_file"
-  chown -R openldap:openldap /var/lib/ldap
 fi
 
 if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-exec slapd -d 0 -f "$config_file"
+slapd_urls="ldap:///"
+if grep -q '^TLSCertificateFile ' "$config_file"; then
+  slapd_urls="$slapd_urls ldaps:///"
+fi
+
+exec slapd -d 0 -f "$config_file" -h "$slapd_urls"

@@ -1,0 +1,27 @@
+---
+- name: Debug Message
+  ansible.builtin.debug:
+    msg: "Start installation of PKI"
+
+- name: Create root CA
+  ansible.builtin.include_tasks: root-ca.yml
+
+- name: Create intermediate CA
+  ansible.builtin.include_tasks: intermediate-ca.yml
+
+- name: Validate server certificate requests
+  ansible.builtin.assert:
+    that:
+      - pki_server_certificates | length > 0
+    fail_msg: >-
+      Define at least one certificate in pki_server_certificates.
+
+- name: Create server TLS certificates
+  ansible.builtin.include_tasks: server-certificate.yml
+  loop: "{{ pki_server_certificates }}"
+  loop_control:
+    loop_var: pki_server_certificate
+    label: "{{ pki_server_certificate.name }}"
+
+- name: Verify PKI certificate chain
+  ansible.builtin.include_tasks: verify_chain.yml

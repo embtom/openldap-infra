@@ -47,10 +47,20 @@ base DN:
 ./scripts/test-openldap
 ```
 
-For a remote server or a non-default port, specify the target explicitly:
+The test connects through LDAPS on port 636 by default and verifies the server
+certificate against the PKI root CA at
+`~/.local/share/embtom/pki/certs/root-ca.crt`.
+For a remote server, non-default port, or root CA stored elsewhere, specify the
+target explicitly:
 
 ```sh
-./scripts/test-openldap --host ldap.example.org --port 389
+./scripts/test-openldap --host ldap.example.org --ca-cert /path/to/root-ca.crt
+```
+
+To test unencrypted LDAP on port 389, select the LDAP protocol explicitly:
+
+```sh
+./scripts/test-openldap --protocol ldap
 ```
 
 Test an authenticated administrator bind and list the configured directory:
@@ -82,7 +92,16 @@ openldap_config_schemas:
         SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
 ```
 
-Set `openldap_config_tls_enabled: true` and provide the certificate and key at
-`openldap_service_tls_cert_file` and `openldap_service_tls_key_file` to publish
-LDAPS on port 636. The service role permits its rootless service user to bind
-ports from 389 onward through `net.ipv4.ip_unprivileged_port_start`.
+To publish LDAPS on port 636, enable TLS and set the DNS name clients use to
+reach the LDAP server:
+
+```yaml
+openldap_config_tls_enabled: true
+openldap_external_host: ldap.example.org
+```
+
+The `pki` role creates host- and service-specific TLS artifacts, such as
+`ldap.example.org-openldap-fullchain.crt`, on the Ansible controller. The
+service role deploys them to the LDAP host and permits its rootless user to
+bind ports from 389 onward through
+`net.ipv4.ip_unprivileged_port_start`.

@@ -13,5 +13,7 @@ openldap_service_unprivileged_port_start: 389
 openldap_service_ldap_port: 389
 openldap_service_ldaps_port: 636
 openldap_service_tls_enabled: "{{ openldap_config_tls_enabled }}"
-openldap_service_tls_cert_file: /var/lib/openldap/tls/tls.crt
-openldap_service_tls_key_file: /var/lib/openldap/tls/tls.key
+openldap_service_tls_dir: /var/lib/openldap/tls
+openldap_service_tls_server_name: "{{ openldap_external_host }}"
+openldap_service_tls_certificate_name: >-
+  {{ openldap_service_tls_server_name }}-{{ openldap_service_name }}

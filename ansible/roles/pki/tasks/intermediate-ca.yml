@@ -1,0 +1,69 @@
+---
+- name: Create controller intermediate CA directory
+  ansible.builtin.file:
+    path: "{{ pki_intermediate_ca_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+
+- name: Create controller intermediate CA subdirectories
+  ansible.builtin.file:
+    path: "{{ pki_intermediate_ca_dir }}/{{ item.name }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - name: private
+      mode: "0700"
+    - name: csr
+      mode: "0755"
+    - name: certs
+      mode: "0755"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Create intermediate CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ pki_intermediate_ca_key }}"
+    type: RSA
+    size: 4096
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Create intermediate CA CSR
+  community.crypto.openssl_csr:
+    path: "{{ pki_intermediate_ca_csr }}"
+    privatekey_path: "{{ pki_intermediate_ca_key }}"
+    common_name: "{{ pki_intermediate_ca_common_name }}"
+    country_name: "{{ pki_country }}"
+    state_or_province_name: "{{ pki_state }}"
+    organization_name: "{{ pki_organization }}"
+    basic_constraints:
+      - "CA:TRUE"
+      - "pathlen:0"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Sign intermediate CA certificate with root CA
+  community.crypto.x509_certificate:
+    path: "{{ pki_intermediate_ca_certificate }}"
+    csr_path: "{{ pki_intermediate_ca_csr }}"
+    provider: ownca
+    ownca_path: "{{ pki_root_ca_certificate }}"
+    ownca_privatekey_path: "{{ pki_root_ca_key }}"
+    ownca_not_after: "+1825d"
+    ownca_digest: sha256
+  delegate_to: localhost
+  become: false
+  run_once: true

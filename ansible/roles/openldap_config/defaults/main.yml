@@ -3,7 +3,7 @@ openldap_config_user: openldap
 openldap_config_service_name: openldap
 openldap_config_base_dn: dc=example,dc=org
 openldap_config_organization: Example Organization
-openldap_config_tls_enabled: false
+openldap_config_tls_enabled: true
 openldap_config_schemas: []
 openldap_config_dir: /var/lib/openldap/config
 openldap_config_file: "{{ openldap_config_dir }}/slapd.conf"

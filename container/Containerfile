@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
   && apt-get install --no-install-recommends --yes ca-certificates \
   ldap-utils \
+  procps \
   slapd \
   && rm -rf /var/lib/apt/lists/*
 
@@ -12,8 +13,7 @@ COPY container/entrypoint.sh /usr/local/bin/openldap-entrypoint
 
 RUN chmod 0755 /usr/local/bin/openldap-entrypoint \
   && mkdir -p /var/lib/ldap /run/slapd \
-  && rm -rf /var/lib/ldap/* \
-  && chown -R openldap:openldap /var/lib/ldap /run/slapd
+  && rm -rf /var/lib/ldap/
 
 VOLUME ["/var/lib/ldap"]
 

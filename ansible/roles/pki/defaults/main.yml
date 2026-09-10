@@ -1,0 +1,23 @@
+---
+pki_root_ca_common_name: "embtom Infrastructure Root CA"
+
+pki_country: "DE"
+pki_state: "Bayern"
+pki_organization: "embtom"
+
+pki_controller_root_dir: >-
+  {{ lookup('ansible.builtin.env', 'HOME') }}/.local/share/embtom/pki
+pki_root_ca_key: "{{ pki_controller_root_dir }}/private/root-ca.key"
+pki_root_ca_csr: "{{ pki_controller_root_dir }}/csr/root-ca.csr"
+pki_root_ca_certificate: "{{ pki_controller_root_dir }}/certs/root-ca.crt"
+
+pki_intermediate_ca_common_name: "embtom Infrastructure Issuing CA"
+pki_intermediate_ca_dir: "{{ pki_controller_root_dir }}/intermediate"
+pki_intermediate_ca_key: >-
+  {{ pki_intermediate_ca_dir }}/private/intermediate-ca.key
+pki_intermediate_ca_csr: "{{ pki_intermediate_ca_dir }}/csr/intermediate-ca.csr"
+pki_intermediate_ca_certificate: >-
+  {{ pki_intermediate_ca_dir }}/certs/intermediate-ca.crt
+
+# Define each service certificate in inventory or play variables.
+pki_server_certificates: []

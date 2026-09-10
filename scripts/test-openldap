@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LDAP_HOST="127.0.0.1"
-LDAP_PORT="389"
+LDAP_HOST="$(hostname --fqdn 2>/dev/null || hostname)"
+LDAP_PROTOCOL="ldaps"
+LDAP_PORT=""
+LDAP_CA_CERT="${HOME}/.local/share/embtom/pki/certs/root-ca.crt"
 
 usage() {
   cat <<EOF
-Usage: $0 [--host HOST] [--port PORT]
+Usage: $0 [--host HOST] [--protocol ldap|ldaps] [--port PORT] [--ca-cert PATH]
 
-  -H, --host HOST   LDAP host to test (default: 127.0.0.1)
-  -p, --port PORT   LDAP port to test (default: 389)
-      --help        Show this help
+  -H, --host HOST             LDAP host to test (default: local FQDN)
+  -P, --protocol PROTOCOL     ldap or ldaps (default: ldaps)
+  -p, --port PORT             Port (default: 389 for ldap, 636 for ldaps)
+  -c, --ca-cert PATH          Root CA certificate for ldaps
+                                (default: $LDAP_CA_CERT)
+      --help                   Show this help
 EOF
 }
 
@@ -20,8 +25,16 @@ while [[ $# -gt 0 ]]; do
     LDAP_HOST="${2:?Missing host value}"
     shift 2
     ;;
+  -P | --protocol)
+    LDAP_PROTOCOL="${2:?Missing protocol value}"
+    shift 2
+    ;;
   -p | --port)
     LDAP_PORT="${2:?Missing port value}"
+    shift 2
+    ;;
+  -c | --ca-cert)
+    LDAP_CA_CERT="${2:?Missing CA certificate path}"
     shift 2
     ;;
   --help)
@@ -35,6 +48,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "==> Querying LDAP root DSE at ldap://${LDAP_HOST}:${LDAP_PORT}"
-ldapsearch -x -LLL -H "ldap://${LDAP_HOST}:${LDAP_PORT}" \
-  -b "" -s base namingContexts
+case "$LDAP_PROTOCOL" in
+ldap)
+  LDAP_PORT="${LDAP_PORT:-389}"
+  ;;
+ldaps)
+  LDAP_PORT="${LDAP_PORT:-636}"
+  if [[ ! -f "$LDAP_CA_CERT" ]]; then
+    echo "ERROR: Root CA certificate '$LDAP_CA_CERT' does not exist." >&2
+    exit 1
+  fi
+  ;;
+*)
+  echo "ERROR: Protocol must be 'ldap' or 'ldaps', not '$LDAP_PROTOCOL'." >&2
+  exit 1
+  ;;
+esac
+
+echo "==> Querying LDAP root DSE at ${LDAP_PROTOCOL}://${LDAP_HOST}:${LDAP_PORT}"
+if [[ "$LDAP_PROTOCOL" == "ldaps" ]]; then
+  LDAPTLS_CACERT="$LDAP_CA_CERT" LDAPTLS_REQCERT=demand \
+    ldapsearch -x -LLL -H "${LDAP_PROTOCOL}://${LDAP_HOST}:${LDAP_PORT}" \
+    -b "" -s base namingContexts
+else
+  ldapsearch -x -LLL -H "${LDAP_PROTOCOL}://${LDAP_HOST}:${LDAP_PORT}" \
+    -b "" -s base namingContexts
+fi

@@ -3,10 +3,30 @@
   hosts: all
   become: false
 
+  vars:
+    openldap_external_host: >-
+      {{ ansible_facts['fqdn'] | default(ansible_facts['hostname'], true) }}
+    pki_server_certificates:
+      - name: "{{ openldap_service_tls_certificate_name }}"
+        common_name: "{{ openldap_external_host }}"
+        subject_alt_names:
+          - "DNS:{{ openldap_external_host }}"
+
+  pre_tasks:
+    - name: Show deployment target
+      ansible.builtin.debug:
+        msg: >-
+          Deploying to {{ inventory_hostname }}
+          ({{ ansible_host | default(inventory_hostname) }})
+      tags: [always]
+
   roles:
+    - role: pki
+      when: openldap_config_tls_enabled | bool
+      tags: [pki, service]
     - role: openldap_config
-      tags: [openldap, config]
+      tags: [config]
     - role: openldap_schema
-      tags: [openldap, schema]
+      tags: [schema]
     - role: openldap_service
-      tags: [openldap, service]
+      tags: [service]

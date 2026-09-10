@@ -6,7 +6,7 @@ Volume={{ openldap_service_data_dir }}:/var/lib/ldap:Z
 Volume={{ openldap_config_dir }}:/etc/ldap/slapd.d:ro,Z
 Volume={{ openldap_schema_dir }}:/etc/ldap/custom-schema:ro,Z
 {% if openldap_service_tls_enabled | bool %}
-Volume={{ openldap_service_tls_cert_file | dirname }}:/tls:ro,Z
+Volume={{ openldap_service_tls_dir }}:/tls:ro,Z
 {% endif %}
 PublishPort={{ openldap_service_ldap_port }}:389
 {% if openldap_service_tls_enabled | bool %}
