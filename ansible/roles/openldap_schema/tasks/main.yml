@@ -10,9 +10,18 @@
   ansible.builtin.assert:
     that:
       - item.filename is match('^[A-Za-z0-9][A-Za-z0-9_.-]*[.]schema$')
-      - item.content is defined
-    fail_msg: Schema filenames must end in .schema and have content.
+      - item.content is defined or item.source is defined
+    fail_msg: Schema filenames must end in .schema and have content or source.
   loop: "{{ openldap_schema_schemas }}"
+
+- name: Validate OpenLDAP Samba schemas
+  ansible.builtin.assert:
+    that:
+      - item.filename is match('^[A-Za-z0-9][A-Za-z0-9_.-]*[.]schema$')
+      - item.content is defined or item.source is defined
+    fail_msg: Schema filenames must end in .schema and have content or source.
+  loop: "{{ openldap_schema_samba_schemas }}"
+  when: openldap_config_samba_enabled | bool
 
 - name: Create OpenLDAP schema directory
   become: true
@@ -26,10 +35,35 @@
 - name: Deploy OpenLDAP custom schemas
   become: true
   ansible.builtin.copy:
-    content: "{{ item.content }}"
+    content: "{{ item.content | default(omit) }}"
     dest: "{{ openldap_schema_dir }}/{{ item.filename }}"
     owner: "{{ openldap_service_user }}"
     group: "{{ openldap_service_user }}"
     mode: "0644"
   loop: "{{ openldap_schema_schemas }}"
+  when: item.content is defined
+  notify: Restart OpenLDAP service
+
+- name: Deploy OpenLDAP Samba schema files
+  become: true
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../openldap_config/files/{{ item.source }}"
+    dest: "{{ openldap_schema_dir }}/{{ item.filename }}"
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0644"
+  loop: "{{ openldap_schema_samba_schemas }}"
+  when: openldap_config_samba_enabled | bool
+  notify: Restart OpenLDAP service
+
+- name: Deploy OpenLDAP custom schema files
+  become: true
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../openldap_config/files/{{ item.source }}"
+    dest: "{{ openldap_schema_dir }}/{{ item.filename }}"
+    owner: "{{ openldap_service_user }}"
+    group: "{{ openldap_service_user }}"
+    mode: "0644"
+  loop: "{{ openldap_schema_schemas }}"
+  when: item.source is defined
   notify: Restart OpenLDAP service
