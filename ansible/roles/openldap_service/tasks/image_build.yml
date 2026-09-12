@@ -20,11 +20,10 @@
   ansible.builtin.command:
     cmd: >-
       podman build --tag {{ openldap_service_image | quote }}
-      --file {{ (openldap_service_git_topdir.stdout | trim ~ '/'
-                 ~ openldap_service_containerfile) | quote }}
+      --file {{ openldap_service_containerfile | quote }}
       {{ openldap_service_build_extra_args }}
-      {{ (openldap_service_git_topdir.stdout | trim ~ '/'
-          ~ openldap_service_build_context) | quote }}
+      {{ openldap_service_build_context | quote }}
+    chdir: "{{ openldap_service_git_topdir.stdout | trim }}"
   changed_when: true
   delegate_to: localhost
   become: false
