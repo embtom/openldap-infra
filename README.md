@@ -63,6 +63,24 @@ To test unencrypted LDAP on port 389, select the LDAP protocol explicitly:
 ./scripts/test-openldap --protocol ldap
 ```
 
+Print the active schema as published by the LDAP server:
+
+```sh
+./scripts/test-openldap-schema
+```
+
+The script resolves the server's `subschemaSubentry` and prints its active
+attribute types, object classes, LDAP syntaxes, and matching rules. It accepts
+the same `--host`, `--protocol`, `--port`, and `--ca-cert` options as
+`test-openldap`. Pass `--raw` to print the complete schema entry as LDIF.
+
+Show the active Linux/SSSD, person, and Samba capabilities with their
+available object classes and attributes:
+
+```sh
+./scripts/test-openldap-enabled-schemas
+```
+
 Test an authenticated administrator bind and list the configured directory:
 
 ```sh
