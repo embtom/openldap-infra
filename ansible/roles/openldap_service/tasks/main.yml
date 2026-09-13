@@ -98,12 +98,24 @@
     group: root
     mode: "0755"
 
+- name: Deploy LDAP services Quadlet network unit
+  become: true
+  ansible.builtin.template:
+    src: ldap-services.network.j2
+    dest: >-
+      {{ '/etc/containers/systemd/users/' ~
+         openldap_service_user_uid ~ '/ldap-services.network' }}
+    owner: root
+    group: root
+    mode: "0644"
+
 - name: Deploy OpenLDAP Quadlet container unit
   become: true
   ansible.builtin.template:
     src: openldap.container.j2
     dest: >-
-      {{ '/etc/containers/systemd/users/' ~ openldap_service_user_uid ~ '/'
+      {{ '/etc/containers/systemd/users/' ~
+        openldap_service_user_uid ~ '/'
          ~ openldap_service_name ~ '.container' }}
     owner: root
     group: root

@@ -30,3 +30,6 @@
       tags: [schema]
     - role: openldap_service
       tags: [service]
+    - role: ldap_account_manager
+      when: ldap_account_manager_enabled | bool
+      tags: [ldap-account-manager]

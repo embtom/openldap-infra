@@ -81,6 +81,21 @@ available object classes and attributes:
 ./scripts/test-openldap-enabled-schemas
 ```
 
+## LDAP Account Manager
+
+The deployment also builds and runs LDAP Account Manager as a separate,
+rootless Podman Quadlet service. Its locally built image tag is
+`localhost/ldap-account-manager:trixie`, and the web interface is available
+on port `8082` by default.
+
+```sh
+http://localhost:8082/
+```
+
+LAM configuration and runtime data persist under `/var/lib/ldap-account-manager`.
+Set `ldap_account_manager_enabled: false` to skip this service, or override
+`ldap_account_manager_port` for a different host port.
+
 Test an authenticated administrator bind and list the configured directory:
 
 ```sh
@@ -141,3 +156,11 @@ The `pki` role creates host- and service-specific TLS artifacts, such as
 service role deploys them to the LDAP host and permits its rootless user to
 bind ports from 389 onward through
 `net.ipv4.ip_unprivileged_port_start`.
+
+## LDAP Account Manager networking
+
+OpenLDAP and LDAP Account Manager run on the private rootless Podman bridge
+network `ldap-services`. LDAP Account Manager can reach the directory through
+the DNS name `openldap`; its web interface remains available through the
+configured host port (default: 8080).
+
