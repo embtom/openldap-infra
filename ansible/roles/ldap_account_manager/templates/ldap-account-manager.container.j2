@@ -5,7 +5,12 @@ ContainerName={{ ldap_account_manager_service_name }}
 Network=ldap-services.network
 Volume={{ ldap_account_manager_config_dir }}:/var/lib/ldap-account-manager/config:Z
 Volume={{ ldap_account_manager_data_dir }}:/var/lib/ldap-account-manager/data:Z
-PublishPort={{ ldap_account_manager_port }}:80
+{% if ldap_account_manager_tls_enabled | bool %}
+Volume={{ ldap_account_manager_tls_dir }}:/tls:ro,Z
+{% endif %}
+{% if ldap_account_manager_tls_enabled | bool %}
+PublishPort={{ ldap_account_manager_https_port }}:443
+{% endif %}
 Environment=LAM_PROFILE_NAME={{ ldap_account_manager_profile_name }}
 Environment=LAM_SERVER_URL={{ ldap_account_manager_server_url }}
 Environment=LAM_BASE_DN={{ ldap_account_manager_base_dn }}

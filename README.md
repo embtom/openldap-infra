@@ -94,10 +94,10 @@ available object classes and attributes:
 The deployment also builds and runs LDAP Account Manager as a separate,
 rootless Podman Quadlet service. Its locally built image tag is
 `localhost/ldap-account-manager:trixie`, and the web interface is available
-on port `8082` by default.
+on port `8443` by default.
 
 ```sh
-http://localhost:8082/
+https://localhost:8443/
 ```
 
 LAM configuration and runtime data persist under `/var/lib/ldap-account-manager`.

@@ -35,6 +35,6 @@ RUN chmod 0755 /usr/local/bin/ldap-account-manager-entrypoint \
   && ln -s /var/lib/ldap-account-manager/data/tmp \
   /usr/share/ldap-account-manager/tmp
 
-EXPOSE 80
+EXPOSE 443
 
 ENTRYPOINT ["/usr/local/bin/ldap-account-manager-entrypoint"]

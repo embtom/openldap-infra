@@ -2,8 +2,8 @@
 - name: Validate LDAP Account Manager deployment settings
   ansible.builtin.assert:
     that:
-      - ldap_account_manager_port | int > 0
-      - ldap_account_manager_port | int < 65536
+      - ldap_account_manager_https_port | int > 0
+      - ldap_account_manager_https_port | int < 65536
       - ldap_account_manager_config_dir is match('^/.+')
       - ldap_account_manager_data_dir is match('^/.+')
     fail_msg: >-
@@ -92,6 +92,40 @@
   loop:
     - "{{ ldap_account_manager_config_dir }}"
     - "{{ ldap_account_manager_data_dir }}"
+
+- name: Create LDAP Account Manager TLS directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ ldap_account_manager_tls_dir }}"
+    state: directory
+    owner: "{{ ldap_account_manager_user }}"
+    group: "{{ ldap_account_manager_user }}"
+    mode: "0750"
+  when: ldap_account_manager_tls_enabled | bool
+
+- name: Deploy LDAP Account Manager TLS certificate chain
+  become: true
+  ansible.builtin.copy:
+    src: >-
+      {{ pki_intermediate_ca_dir ~ '/certs/' ~
+         ldap_account_manager_tls_certificate_name ~ '-fullchain.crt' }}
+    dest: "{{ ldap_account_manager_tls_dir }}/fullchain.crt"
+    owner: "{{ ldap_account_manager_user }}"
+    group: "{{ ldap_account_manager_user }}"
+    mode: "0644"
+  when: ldap_account_manager_tls_enabled | bool
+
+- name: Deploy LDAP Account Manager TLS private key
+  become: true
+  ansible.builtin.copy:
+    src: >-
+      {{ pki_intermediate_ca_dir ~ '/private/' ~
+         ldap_account_manager_tls_certificate_name ~ '.key' }}
+    dest: "{{ ldap_account_manager_tls_dir }}/private.key"
+    owner: "{{ ldap_account_manager_user }}"
+    group: "{{ ldap_account_manager_user }}"
+    mode: "0600"
+  when: ldap_account_manager_tls_enabled | bool
 
 - name: Deploy LDAP Account Manager LDAP CA certificate
   become: true

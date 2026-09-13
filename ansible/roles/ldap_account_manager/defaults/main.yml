@@ -1,7 +1,7 @@
 ---
 ldap_account_manager_enabled: true
 ldap_account_manager_user: "{{ openldap_service_user }}"
-ldap_account_manager_service_name: ldap-account-manager
+ldap_account_manager_service_name: lam
 ldap_account_manager_image: localhost/ldap-account-manager:trixie
 ldap_account_manager_containerfile: container/ldap-account-manager/Containerfile
 ldap_account_manager_build_context: .
@@ -9,9 +9,13 @@ ldap_account_manager_build_extra_args: ""
 ldap_account_manager_force_rebuild: false
 ldap_account_manager_config_dir: /var/lib/ldap-account-manager/config
 ldap_account_manager_data_dir: /var/lib/ldap-account-manager/data
-ldap_account_manager_port: 8082
+ldap_account_manager_https_port: 8443
+ldap_account_manager_tls_enabled: "{{ openldap_config_tls_enabled }}"
+ldap_account_manager_tls_dir: /var/lib/ldap-account-manager/tls
+ldap_account_manager_tls_server_name: "{{ openldap_external_host }}"
+ldap_account_manager_tls_certificate_name: "{{ ansible_hostname }}-lam"
 ldap_account_manager_profile_name: openldap
 ldap_account_manager_server_url: ldaps://openldap:636
 ldap_account_manager_base_dn: "{{ openldap_config_base_dn }}"
 ldap_account_manager_ca_certificate: "{{ pki_root_ca_certificate }}"
-ldap_account_manager_log_destination: "{{ ldap_account_manager_data_dir }}/lam.log"
+ldap_account_manager_log_destination: /var/lib/ldap-account-manager/data/lam.log

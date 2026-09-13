@@ -12,6 +12,10 @@
         subject_alt_names:
           - "DNS:{{ openldap_external_host }}"
           - DNS:openldap
+      - name: "{{ ldap_account_manager_tls_certificate_name }}"
+        common_name: "{{ ldap_account_manager_tls_server_name }}"
+        subject_alt_names:
+          - "DNS:{{ ldap_account_manager_tls_server_name }}"
 
   pre_tasks:
     - name: Show deployment target
@@ -23,8 +27,10 @@
 
   roles:
     - role: pki
-      when: openldap_config_tls_enabled | bool
-      tags: [pki, service]
+      when: >-
+        openldap_config_tls_enabled | bool or
+        ldap_account_manager_tls_enabled | bool
+      tags: [pki, service, ldap-account-manager]
     - role: openldap_config
       tags: [config]
     - role: openldap_schema
