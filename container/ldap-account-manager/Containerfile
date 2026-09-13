@@ -20,8 +20,10 @@ RUN chmod 0755 /usr/local/bin/ldap-account-manager-entrypoint \
   && mkdir -p /var/lib/ldap-account-manager/config \
   /var/lib/ldap-account-manager/data/sess \
   /var/lib/ldap-account-manager/data/tmp/internal \
-  && mv /etc/ldap-account-manager/config.cfg \
+  && cp -L /etc/ldap-account-manager/config.cfg \
   /usr/local/share/ldap-account-manager-config.cfg \
+  && rm -f /etc/ldap-account-manager/config.cfg \
+  && rm -f /var/lib/ldap-account-manager/config/config.cfg \
   && cp /var/lib/ldap-account-manager/config/lam.conf \
   /usr/local/share/ldap-account-manager-profile.conf \
   && ln -s /var/lib/ldap-account-manager/config/config.cfg \

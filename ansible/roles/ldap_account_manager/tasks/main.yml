@@ -93,6 +93,39 @@
     - "{{ ldap_account_manager_config_dir }}"
     - "{{ ldap_account_manager_data_dir }}"
 
+- name: Deploy LDAP Account Manager LDAP CA certificate
+  become: true
+  ansible.builtin.copy:
+    src: "{{ ldap_account_manager_ca_certificate }}"
+    dest: >-
+      {{ ldap_account_manager_config_dir }}/{{
+      ldap_account_manager_ca_certificate | basename }}
+    owner: "{{ ldap_account_manager_user }}"
+    group: "{{ ldap_account_manager_user }}"
+    mode: "0644"
+  when: ldap_account_manager_server_url is match('^ldaps://')
+
+- name: Remove legacy LDAP Account Manager CA certificate file
+  become: true
+  ansible.builtin.file:
+    path: "{{ ldap_account_manager_config_dir }}/serverCerts.pem"
+    state: absent
+  when:
+    - ldap_account_manager_server_url is match('^ldaps://')
+    - ldap_account_manager_ca_certificate | basename != 'serverCerts.pem'
+
+- name: Link LDAP Account Manager CA certificate
+  become: true
+  ansible.builtin.file:
+    src: "{{ ldap_account_manager_ca_certificate | basename }}"
+    dest: "{{ ldap_account_manager_config_dir }}/serverCerts.pem"
+    owner: "{{ ldap_account_manager_user }}"
+    group: "{{ ldap_account_manager_user }}"
+    state: link
+  when:
+    - ldap_account_manager_server_url is match('^ldaps://')
+    - ldap_account_manager_ca_certificate | basename != 'serverCerts.pem'
+
 - name: Create LDAP Account Manager Quadlet directory
   become: true
   ansible.builtin.file:

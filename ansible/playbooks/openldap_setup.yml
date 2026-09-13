@@ -11,6 +11,7 @@
         common_name: "{{ openldap_external_host }}"
         subject_alt_names:
           - "DNS:{{ openldap_external_host }}"
+          - DNS:openldap
 
   pre_tasks:
     - name: Show deployment target

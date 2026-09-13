@@ -104,6 +104,16 @@ LAM configuration and runtime data persist under `/var/lib/ldap-account-manager`
 Set `ldap_account_manager_enabled: false` to skip this service, or override
 `ldap_account_manager_port` for a different host port.
 
+LAM connects to OpenLDAP using verified LDAPS on the private `ldap-services`
+network. The OpenLDAP certificate includes the internal `openldap` DNS alias,
+and the LAM role installs the deployment root CA in its persistent
+configuration directory.
+
+LAM writes application logs to
+`/var/lib/ldap-account-manager/data/ldap-account-manager.log`. Its entrypoint
+forwards new log lines to standard error, which Podman captures in the system
+journal. View them with `sudo journalctl CONTAINER_NAME=ldap-account-manager`.
+
 Test an authenticated administrator bind and list the configured directory:
 
 ```sh
@@ -169,6 +179,6 @@ bind ports from 389 onward through
 
 OpenLDAP and LDAP Account Manager run on the private rootless Podman bridge
 network `ldap-services`. LDAP Account Manager can reach the directory through
-the DNS name `openldap`; its web interface remains available through the
-configured host port (default: 8080).
+the DNS name `openldap` over LDAPS on port `636`; its web interface remains
+available through the configured host port (default: `8082`).
 

@@ -11,5 +11,7 @@ ldap_account_manager_config_dir: /var/lib/ldap-account-manager/config
 ldap_account_manager_data_dir: /var/lib/ldap-account-manager/data
 ldap_account_manager_port: 8082
 ldap_account_manager_profile_name: openldap
-ldap_account_manager_server_url: ldap://openldap:389
+ldap_account_manager_server_url: ldaps://openldap:636
 ldap_account_manager_base_dn: "{{ openldap_config_base_dn }}"
+ldap_account_manager_ca_certificate: "{{ pki_root_ca_certificate }}"
+ldap_account_manager_log_destination: "{{ ldap_account_manager_data_dir }}/lam.log"

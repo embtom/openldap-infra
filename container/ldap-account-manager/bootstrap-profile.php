@@ -6,8 +6,9 @@ require_once '/usr/share/ldap-account-manager/lib/config.inc';
 $profileName = getenv('LAM_PROFILE_NAME');
 $serverUrl = getenv('LAM_SERVER_URL');
 $baseDn = getenv('LAM_BASE_DN');
+$logDestination = getenv('LAM_LOG_DESTINATION');
 
-if ($profileName === false || $serverUrl === false || $baseDn === false) {
+if ($profileName === false || $serverUrl === false || $baseDn === false || $logDestination === false) {
     fwrite(STDERR, "LAM profile settings are required.\n");
     exit(1);
 }
@@ -15,6 +16,7 @@ if ($profileName === false || $serverUrl === false || $baseDn === false) {
 $profileManager = new ServerProfilePersistenceManager();
 $profile = $profileManager->loadProfile($profileName);
 $profile->set_ServerURL($serverUrl);
+$profile->setUseTLS('no');
 $profile->set_Suffix('user', 'ou=People,' . $baseDn);
 $profile->set_Suffix('group', 'ou=Groups,' . $baseDn);
 $profile->set_Adminstring('cn=admin,' . $baseDn);
@@ -46,4 +48,5 @@ $profileManager->saveProfile($profile, $profileName);
 
 $mainConfig = new LAMCfgMain();
 $mainConfig->default = $profileName;
+$mainConfig->logDestination = $logDestination;
 $mainConfig->save();
