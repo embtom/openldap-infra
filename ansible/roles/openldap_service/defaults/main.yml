@@ -3,7 +3,7 @@ openldap_service_user: "{{ openldap_config_user }}"
 openldap_service_name: "{{ openldap_config_service_name }}"
 openldap_service_container_method: direct-build
 openldap_service_image: localhost/openldap:trixie
-openldap_service_containerfile: container/Containerfile
+openldap_service_containerfile: container/openldap/Containerfile
 openldap_service_build_context: .
 openldap_service_build_extra_args: ""
 openldap_service_force_rebuild: false

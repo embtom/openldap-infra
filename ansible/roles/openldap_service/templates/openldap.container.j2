@@ -2,6 +2,8 @@
 Image={{ openldap_service_image }}
 Pull={{ 'never' if openldap_service_container_method == 'direct-build' else 'always' }}
 ContainerName={{ openldap_service_name }}
+Network=ldap-services.network
+NetworkAlias=openldap
 Volume={{ openldap_service_data_dir }}:/var/lib/ldap:Z
 Volume={{ openldap_config_dir }}:/etc/ldap/slapd.d:ro,Z
 Volume={{ openldap_schema_dir }}:/etc/ldap/custom-schema:ro,Z

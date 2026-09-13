@@ -1,0 +1,136 @@
+---
+- name: Validate LDAP Account Manager deployment settings
+  ansible.builtin.assert:
+    that:
+      - ldap_account_manager_port | int > 0
+      - ldap_account_manager_port | int < 65536
+      - ldap_account_manager_config_dir is match('^/.+')
+      - ldap_account_manager_data_dir is match('^/.+')
+    fail_msg: >-
+      Set a valid LDAP Account Manager port and absolute data directories.
+
+- name: Get LDAP Account Manager service user details
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ ldap_account_manager_user }}"
+  register: ldap_account_manager_user_info
+
+- name: Set LDAP Account Manager service user facts
+  ansible.builtin.set_fact:
+    ldap_account_manager_runtime_user_uid: >-
+      {{ ldap_account_manager_user_info.ansible_facts
+         .getent_passwd[ldap_account_manager_user][1] }}
+
+- name: Get LDAP Account Manager Git top-level directory
+  ansible.builtin.command: git rev-parse --show-toplevel
+  register: ldap_account_manager_git_topdir
+  changed_when: false
+  delegate_to: localhost
+  become: false
+
+- name: Remove existing local LDAP Account Manager image
+  containers.podman.podman_image:
+    name: "{{ ldap_account_manager_image }}"
+    state: absent
+    force: true
+  delegate_to: localhost
+  become: false
+  when: ldap_account_manager_force_rebuild | bool
+
+- name: Build LDAP Account Manager image locally
+  ansible.builtin.command:
+    cmd: >-
+      podman build --tag {{ ldap_account_manager_image | quote }}
+      --file {{ ldap_account_manager_containerfile | quote }}
+      {{ ldap_account_manager_build_extra_args }}
+      {{ ldap_account_manager_build_context | quote }}
+    chdir: "{{ ldap_account_manager_git_topdir.stdout | trim }}"
+  changed_when: true
+  delegate_to: localhost
+  become: false
+
+- name: Export locally built LDAP Account Manager image
+  containers.podman.podman_save:
+    image: "{{ ldap_account_manager_image }}"
+    dest: /tmp/ldap-account-manager-image.tar
+  delegate_to: localhost
+  become: false
+
+- name: Copy LDAP Account Manager image archive to target host
+  ansible.builtin.copy:
+    src: /tmp/ldap-account-manager-image.tar
+    dest: /tmp/ldap-account-manager-image.tar
+    mode: "0644"
+
+- name: Load LDAP Account Manager image into service user storage
+  become: true
+  become_user: "{{ ldap_account_manager_user }}"
+  containers.podman.podman_load:
+    input: /tmp/ldap-account-manager-image.tar
+
+- name: Remove LDAP Account Manager image archive from target host
+  become: true
+  ansible.builtin.file:
+    path: /tmp/ldap-account-manager-image.tar
+    state: absent
+
+- name: Remove local LDAP Account Manager image archive
+  ansible.builtin.file:
+    path: /tmp/ldap-account-manager-image.tar
+    state: absent
+  delegate_to: localhost
+  become: false
+
+- name: Create LDAP Account Manager persistent directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ldap_account_manager_user }}"
+    group: "{{ ldap_account_manager_user }}"
+    mode: "0750"
+  loop:
+    - "{{ ldap_account_manager_config_dir }}"
+    - "{{ ldap_account_manager_data_dir }}"
+
+- name: Create LDAP Account Manager Quadlet directory
+  become: true
+  ansible.builtin.file:
+    path: >-
+      /etc/containers/systemd/users/{{ ldap_account_manager_runtime_user_uid }}
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy LDAP Account Manager Quadlet container unit
+  become: true
+  ansible.builtin.template:
+    src: ldap-account-manager.container.j2
+    dest: >-
+      {{ '/etc/containers/systemd/users/' ~
+        ldap_account_manager_runtime_user_uid ~ '/'
+         ~ ldap_account_manager_service_name ~ '.container' }}
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Reload LDAP Account Manager user systemd daemon
+  become: true
+  become_user: "{{ ldap_account_manager_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ldap_account_manager_runtime_user_uid }}"
+  ansible.builtin.systemd:
+    scope: user
+    daemon_reload: true
+
+- name: Start and enable LDAP Account Manager service
+  become: true
+  become_user: "{{ ldap_account_manager_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ldap_account_manager_runtime_user_uid }}"
+  ansible.builtin.systemd:
+    name: "{{ ldap_account_manager_service_name }}.service"
+    scope: user
+    state: restarted
+    enabled: true

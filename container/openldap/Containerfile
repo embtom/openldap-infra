@@ -9,7 +9,7 @@ RUN apt-get update \
   slapd \
   && rm -rf /var/lib/apt/lists/*
 
-COPY container/entrypoint.sh /usr/local/bin/openldap-entrypoint
+COPY container/openldap/entrypoint.sh /usr/local/bin/openldap-entrypoint
 
 RUN chmod 0755 /usr/local/bin/openldap-entrypoint \
   && mkdir -p /var/lib/ldap /run/slapd \

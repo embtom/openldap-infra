@@ -87,7 +87,8 @@
         "openldap",
         "config",
         "schema",
-        "service"
+        "service",
+        "ldap-account-manager"
       ]
     },
     {

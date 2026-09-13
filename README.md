@@ -63,6 +63,39 @@ To test unencrypted LDAP on port 389, select the LDAP protocol explicitly:
 ./scripts/test-openldap --protocol ldap
 ```
 
+Print the active schema as published by the LDAP server:
+
+```sh
+./scripts/test-openldap-schema
+```
+
+The script resolves the server's `subschemaSubentry` and prints its active
+attribute types, object classes, LDAP syntaxes, and matching rules. It accepts
+the same `--host`, `--protocol`, `--port`, and `--ca-cert` options as
+`test-openldap`. Pass `--raw` to print the complete schema entry as LDIF.
+
+Show the active Linux/SSSD, person, and Samba capabilities with their
+available object classes and attributes:
+
+```sh
+./scripts/test-openldap-enabled-schemas
+```
+
+## LDAP Account Manager
+
+The deployment also builds and runs LDAP Account Manager as a separate,
+rootless Podman Quadlet service. Its locally built image tag is
+`localhost/ldap-account-manager:trixie`, and the web interface is available
+on port `8082` by default.
+
+```sh
+http://localhost:8082/
+```
+
+LAM configuration and runtime data persist under `/var/lib/ldap-account-manager`.
+Set `ldap_account_manager_enabled: false` to skip this service, or override
+`ldap_account_manager_port` for a different host port.
+
 Test an authenticated administrator bind and list the configured directory:
 
 ```sh
@@ -70,7 +103,25 @@ Test an authenticated administrator bind and list the configured directory:
 ```
 
 The script prompts for the administrator password. Use `--base-dn` when the
-deployment does not use the default `dc=example,dc=org` base DN.
+deployment does not use the default `dc=embtom,dc=org` base DN.
+
+## Directory Structure
+
+The initial directory uses `dc=embtom,dc=org` and creates these organizational
+units:
+
+```text
+ou=People
+ou=Groups
+ou=Services
+ou=Computers
+ou=Samba
+```
+
+The configuration includes indexes for POSIX accounts and groups. The initial
+access controls permit password authentication for
+anonymous clients, password changes by account owners, and directory reads by
+authenticated users. The LDAP administrator has full access.
 
 ## Custom schemas
 
@@ -105,3 +156,11 @@ The `pki` role creates host- and service-specific TLS artifacts, such as
 service role deploys them to the LDAP host and permits its rootless user to
 bind ports from 389 onward through
 `net.ipv4.ip_unprivileged_port_start`.
+
+## LDAP Account Manager networking
+
+OpenLDAP and LDAP Account Manager run on the private rootless Podman bridge
+network `ldap-services`. LDAP Account Manager can reach the directory through
+the DNS name `openldap`; its web interface remains available through the
+configured host port (default: 8080).
+

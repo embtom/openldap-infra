@@ -6,9 +6,11 @@
       - openldap_config_admin_password | length > 0
       - openldap_config_dir is match('^/.+')
       - openldap_config_dir != '/'
+      - openldap_config_organizational_units | length > 0
+      - openldap_config_indexes | length > 0
     fail_msg: >-
-      Set a non-empty openldap_config_admin_password and a non-root absolute
-      configuration directory.
+      Set a non-empty administrator password, a non-root absolute configuration
+      directory, and at least one organizational unit and index.
 
 - name: Create OpenLDAP service user
   become: true

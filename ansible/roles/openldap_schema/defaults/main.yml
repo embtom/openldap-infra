@@ -1,3 +1,4 @@
 ---
 openldap_schema_dir: /var/lib/openldap/schema
 openldap_schema_schemas: "{{ openldap_config_schemas }}"
+openldap_schema_samba_schemas: "{{ openldap_config_samba_schema }}"

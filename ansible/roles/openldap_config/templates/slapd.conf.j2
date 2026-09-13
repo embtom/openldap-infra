@@ -2,7 +2,8 @@ include         /etc/ldap/schema/core.schema
 include         /etc/ldap/schema/cosine.schema
 include         /etc/ldap/schema/nis.schema
 include         /etc/ldap/schema/inetorgperson.schema
-{% for schema in openldap_config_schemas %}
+{% set custom_schemas = openldap_config_schemas + (openldap_config_samba_schema if openldap_config_samba_enabled | bool else []) %}
+{% for schema in custom_schemas %}
 include         /etc/ldap/custom-schema/{{ schema.filename }}
 {% endfor %}
 pidfile         /run/slapd/slapd.pid
@@ -19,5 +20,24 @@ suffix          "{{ openldap_config_base_dn }}"
 rootdn          "cn=admin,{{ openldap_config_base_dn }}"
 rootpw          {CRYPT}{{ openldap_config_admin_password | password_hash('sha512') }}
 directory       /var/lib/ldap
-index           objectClass eq
-index           cn,sn,uid eq,pres,sub
+{% for index in openldap_config_indexes %}
+index           {{ index }}
+{% endfor %}
+{% if openldap_config_samba_enabled | bool %}
+{% for index in openldap_config_samba_indexes %}
+index           {{ index }}
+{% endfor %}
+{% endif %}
+access to attrs=userPassword
+	by self write
+	by anonymous auth
+	by dn.exact="cn=admin,{{ openldap_config_base_dn }}" write
+	by * none
+access to attrs=shadowLastChange
+	by self write
+	by dn.exact="cn=admin,{{ openldap_config_base_dn }}" write
+	by * read
+access to *
+	by dn.exact="cn=admin,{{ openldap_config_base_dn }}" write
+	by users read
+	by * none
