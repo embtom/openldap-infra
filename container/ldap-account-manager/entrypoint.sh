@@ -13,8 +13,9 @@ fi
 if [ ! -f "$config_dir/${LAM_PROFILE_NAME}.conf" ]; then
   cp /usr/local/share/ldap-account-manager-profile.conf \
     "$config_dir/${LAM_PROFILE_NAME}.conf"
-  /usr/local/bin/ldap-account-manager-bootstrap-profile
 fi
+
+/usr/local/bin/ldap-account-manager-bootstrap-profile
 
 chown -R www-data:www-data "$config_dir" "$data_dir"
 
