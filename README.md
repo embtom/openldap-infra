@@ -31,8 +31,16 @@ rootless Podman storage on the target host. The generated Quadlet uses
 Persistent LDAP data is stored at `/var/lib/openldap/data`. The
 `openldap_config` role prepares the initial base entry and `cn=admin` account
 from `openldap_config_base_dn`, `openldap_config_organization`, and
-`openldap_config_admin_password`; the container imports this data only on its
-first start.
+`openldap_config_admin_password`; the container imports this data only when it
+creates a new database.
+
+Changing `openldap_config_base_dn` does not migrate a persistent directory.
+Before changing the suffix on an existing deployment, export and back up the
+directory, update every DN and DN-valued attribute for the new suffix, then
+import the transformed LDIF into a new empty data directory. For disposable
+development data, use `scripts/purge-openldap` and deploy again instead. Do
+not change the suffix and restart an existing database: OpenLDAP cannot rename
+an LDAP tree automatically.
 
 The `openldap_config` role generates the `slapd.conf` consumed by the
 container. It configures the database, base DN, administrator credentials,
