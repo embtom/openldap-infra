@@ -15,6 +15,10 @@ if [ ! -f "$config_dir/${LAM_PROFILE_NAME}.conf" ]; then
     "$config_dir/${LAM_PROFILE_NAME}.conf"
 fi
 
+if [ ! -d "$config_dir/templates" ]; then
+  cp -a /usr/local/share/ldap-account-manager-templates "$config_dir/templates"
+fi
+
 /usr/local/bin/ldap-account-manager-bootstrap-profile
 
 find -P "$config_dir" "$data_dir" -xdev ! -type l \
