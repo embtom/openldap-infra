@@ -5,25 +5,39 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
   && apt-get install --no-install-recommends --yes \
   ldap-account-manager \
+  locales \
   nginx \
   php-fpm \
+  && sed -i 's/^# \(en_GB.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
+  && locale-gen \
   && rm -rf /var/lib/apt/lists/*
 
 COPY container/ldap-account-manager/entrypoint.sh /usr/local/bin/ldap-account-manager-entrypoint
 COPY container/ldap-account-manager/bootstrap-profile.php /usr/local/bin/ldap-account-manager-bootstrap-profile
 COPY container/ldap-account-manager/nginx.conf /etc/nginx/sites-available/default
 
+# Configure the container entrypoints and use the supplied Nginx virtual host.
 RUN chmod 0755 /usr/local/bin/ldap-account-manager-entrypoint \
   && chmod 0755 /usr/local/bin/ldap-account-manager-bootstrap-profile \
   && rm -f /etc/nginx/sites-enabled/default \
-  && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
-  && mkdir -p /var/lib/ldap-account-manager/config \
+  && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+# Create the paths which are mounted as persistent container volumes.
+RUN mkdir -p /var/lib/ldap-account-manager/config \
   /var/lib/ldap-account-manager/data/sess \
-  /var/lib/ldap-account-manager/data/tmp/internal \
-  && mv /etc/ldap-account-manager/config.cfg \
+  /var/lib/ldap-account-manager/data/tmp/internal
+
+# Preserve package defaults as seeds for an initially empty config volume.
+RUN cp -L /etc/ldap-account-manager/config.cfg \
   /usr/local/share/ldap-account-manager-config.cfg \
   && cp /var/lib/ldap-account-manager/config/lam.conf \
   /usr/local/share/ldap-account-manager-profile.conf \
+  && cp -a /var/lib/ldap-account-manager/config/templates \
+  /usr/local/share/ldap-account-manager-templates
+
+# Redirect package paths to data that survives container replacement.
+RUN rm -f /etc/ldap-account-manager/config.cfg \
+  /var/lib/ldap-account-manager/config/config.cfg \
   && ln -s /var/lib/ldap-account-manager/config/config.cfg \
   /etc/ldap-account-manager/config.cfg \
   && rm -f /usr/share/ldap-account-manager/sess \
@@ -33,6 +47,6 @@ RUN chmod 0755 /usr/local/bin/ldap-account-manager-entrypoint \
   && ln -s /var/lib/ldap-account-manager/data/tmp \
   /usr/share/ldap-account-manager/tmp
 
-EXPOSE 80
+EXPOSE 443
 
 ENTRYPOINT ["/usr/local/bin/ldap-account-manager-entrypoint"]
