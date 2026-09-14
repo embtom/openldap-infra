@@ -1,0 +1,86 @@
+---
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          ./scripts/install-requirements
+          ./scripts/install-ansible
+
+      - name: Run linters
+        run: ./scripts/ansible-lint --github-format
+
+      - name: Publish ansible-lint results
+        uses: github/codeql-action/upload-sarif@v4
+        if: >-
+          always() &&
+          !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+        with:
+          sarif_file: scripts/ansible-lint.sarif
+          category: ansible-lint
+
+  build-containers:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - name: openldap
+            containerfile: container/openldap/Containerfile
+          - name: ldap-account-manager
+            containerfile: container/ldap-account-manager/Containerfile
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Prepare build environment
+        uses: ./.github/actions/setup-podman
+
+      - name: Build image
+        id: build
+        uses: redhat-actions/buildah-build@061ffd31bb5c3f8733a6f9bbdf00a9fb02eb708c
+        with:
+          image: ${{ github.repository }}/${{ matrix.container.name }}
+          tags: latest
+          containerfiles: ${{ matrix.container.containerfile }}
+          context: .
+          oci: true
+
+      - name: Log in to ghcr.io
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build.outputs.image }}
+          tags: latest
+          registry: ghcr.io
