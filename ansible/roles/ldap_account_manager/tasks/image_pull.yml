@@ -1,0 +1,7 @@
+---
+- name: Pull LDAP Account Manager image from registry
+  become: true
+  become_user: "{{ ldap_account_manager_user }}"
+  containers.podman.podman_image:
+    name: "{{ ldap_account_manager_image }}"
+    state: present

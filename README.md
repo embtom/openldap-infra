@@ -3,7 +3,9 @@
 This repository builds an OpenLDAP container on Debian Trixie and deploys it as
 a rootless Podman Quadlet managed by a systemd user service.
 
-## Build the image
+[![CI](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml/badge.svg)](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml)
+
+## Build the Image
 
 ```sh
 ansible-playbook -i ansible/inventories/hosts.yml \
@@ -12,7 +14,7 @@ ansible-playbook -i ansible/inventories/hosts.yml \
 
 ## Deploy with Ansible
 
-Install the required collection, set the administrator password in inventory
+Install the required collection, set the administrator password in the inventory
 (preferably through Ansible Vault), then run the playbook:
 
 ```sh
@@ -21,12 +23,22 @@ ansible-playbook -i inventory.yml ansible/playbooks/openldap_setup.yml \
   -e openldap_config_admin_password='use-a-secret-manager-or-vault'
 ```
 
-By default, the `openldap_service` role builds `localhost/openldap:trixie` on
-the Ansible controller, exports it, and loads it into `openldap`'s
-rootless Podman storage on the target host. The generated Quadlet uses
-`Pull=never`. To pull an image from a registry instead, set
-`openldap_service_container_method: image-pull` and
-`openldap_service_image` in inventory; the Quadlet then uses `Pull=always`.
+By default, the `openldap_service` and `ldap_account_manager` roles pull their
+published GHCR images. The generated Quadlets use `Pull=always`:
+
+```yaml
+openldap_service_container_method: image-pull
+ldap_account_manager_container_method: image-pull
+```
+
+The roles use `ghcr.io/embtom/openldap-infra/openldap:latest` and
+`ghcr.io/embtom/openldap-infra/ldap-account-manager:latest` by default.
+Override either role's `*_image_pull_image` value to use another registry image.
+
+To build from the local checkout instead, set either role's
+`*_container_method` to `direct-build`. The image is then built on the Ansible
+controller, transferred into the service user's rootless Podman storage, and
+the Quadlet uses `Pull=never`.
 
 Persistent LDAP data is stored at `/var/lib/openldap/data`. The
 `openldap_config` role prepares the initial base entry and `cn=admin` account
@@ -96,23 +108,22 @@ rootless Podman Quadlet service. Its locally built image tag is
 `localhost/ldap-account-manager:trixie`, and the web interface is available
 on port `8443` by default.
 
-```sh
+```text
 https://localhost:8443/
 ```
 
 LAM configuration and runtime data persist under `/var/lib/ldap-account-manager`.
 Set `ldap_account_manager_enabled: false` to skip this service, or override
-`ldap_account_manager_port` for a different host port.
+`ldap_account_manager_https_port` for a different HTTPS host port.
 
 LAM connects to OpenLDAP using verified LDAPS on the private `ldap-services`
 network. The OpenLDAP certificate includes the internal `openldap` DNS alias,
 and the LAM role installs the deployment root CA in its persistent
 configuration directory.
 
-LAM writes application logs to
-`/var/lib/ldap-account-manager/data/ldap-account-manager.log`. Its entrypoint
+LAM writes application logs to `/var/lib/ldap-account-manager/data/lam.log`. Its entrypoint
 forwards new log lines to standard error, which Podman captures in the system
-journal. View them with `sudo journalctl CONTAINER_NAME=ldap-account-manager`.
+journal. View them with `sudo journalctl CONTAINER_NAME=lam`.
 
 Test an authenticated administrator bind and list the configured directory:
 
@@ -141,9 +152,9 @@ access controls permit password authentication for
 anonymous clients, password changes by account owners, and directory reads by
 authenticated users. The LDAP administrator has full access.
 
-## Custom schemas
+## Custom Schemas
 
-Declare custom schema files with the `openldap_schema` role in inventory.
+Declare custom schema files with the `openldap_schema` role in the inventory.
 Ansible writes them to
 `/var/lib/openldap/schema`, and the Quadlet mounts that directory read-only at
 `/etc/ldap/custom-schema`. The generated `slapd.conf` includes every
@@ -175,10 +186,9 @@ service role deploys them to the LDAP host and permits its rootless user to
 bind ports from 389 onward through
 `net.ipv4.ip_unprivileged_port_start`.
 
-## LDAP Account Manager networking
+## LDAP Account Manager Networking
 
 OpenLDAP and LDAP Account Manager run on the private rootless Podman bridge
 network `ldap-services`. LDAP Account Manager can reach the directory through
 the DNS name `openldap` over LDAPS on port `636`; its web interface remains
-available through the configured host port (default: `8082`).
-
+available through the configured HTTPS host port (default: `8443`).
