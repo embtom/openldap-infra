@@ -2,7 +2,14 @@
 ldap_account_manager_enabled: true
 ldap_account_manager_user: "{{ openldap_service_user }}"
 ldap_account_manager_service_name: lam
-ldap_account_manager_image: localhost/ldap-account-manager:trixie
+ldap_account_manager_container_method: image-pull
+ldap_account_manager_direct_build_image: localhost/ldap-account-manager:trixie
+ldap_account_manager_image_pull_image: >-
+  ghcr.io/embtom/openldap-infra/ldap-account-manager:latest
+ldap_account_manager_image: >-
+  {{ ldap_account_manager_direct_build_image
+     if ldap_account_manager_container_method == 'direct-build'
+     else ldap_account_manager_image_pull_image }}
 ldap_account_manager_containerfile: container/ldap-account-manager/Containerfile
 ldap_account_manager_build_context: .
 ldap_account_manager_build_extra_args: ""

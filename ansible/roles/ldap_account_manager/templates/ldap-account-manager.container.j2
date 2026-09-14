@@ -1,6 +1,6 @@
 [Container]
 Image={{ ldap_account_manager_image }}
-Pull=never
+Pull={{ 'never' if ldap_account_manager_container_method == 'direct-build' else 'always' }}
 ContainerName={{ ldap_account_manager_service_name }}
 Network=ldap-services.network
 Volume={{ ldap_account_manager_config_dir }}:/var/lib/ldap-account-manager/config:Z
