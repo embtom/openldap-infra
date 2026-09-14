@@ -1,0 +1,45 @@
+---
+name: "Setup Podman Environment"
+description: "Prepare Podman for rootless builds"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Remove Docker if installed
+      shell: bash
+      run: |
+        if command -v docker >/dev/null 2>&1; then
+          sudo systemctl stop docker docker.socket || true
+          sudo apt-get purge -y \
+            docker \
+            docker.io \
+            docker-ce \
+            docker-ce-cli \
+            containerd runc || true
+          sudo apt-get autoremove -y
+          sudo rm -rf /var/lib/docker /var/lib/containerd
+        fi
+
+    - name: Install Podman build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          podman \
+          fuse-overlayfs \
+          uidmap
+
+    - name: Configure rootless Podman storage
+      shell: bash
+      run: |
+        mkdir -p ~/.config/containers ~/.local/share/containers
+        cat >~/.config/containers/storage.conf <<EOF
+        [storage]
+        driver = "overlay"
+        runroot = "/tmp/run-$(id -u)"
+        graphroot = "$HOME/.local/share/containers/storage"
+        [storage.options]
+        mount_program = "/usr/bin/fuse-overlayfs"
+        EOF
+        podman system migrate
+        podman --version
