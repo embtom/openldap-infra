@@ -8,9 +8,16 @@
       - openldap_config_dir != '/'
       - openldap_config_organizational_units | length > 0
       - openldap_config_indexes | length > 0
+      - >-
+        not openldap_config_gitlab.enabled | bool or
+        openldap_config_gitlab.memberof_enabled | bool
+      - >-
+        not openldap_config_gitlab.enabled | bool or
+        openldap_config_gitlab.bind_password | length > 0
     fail_msg: >-
       Set a non-empty administrator password, a non-root absolute configuration
-      directory, and at least one organizational unit and index.
+      directory, at least one organizational unit and index, and a GitLab bind
+      password when enabling GitLab LDAP integration.
 
 - name: Create OpenLDAP service user
   become: true
@@ -45,6 +52,16 @@
   ansible.builtin.template:
     src: bootstrap.ldif.j2
     dest: "{{ openldap_config_bootstrap_file }}"
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Deploy OpenLDAP GitLab bootstrap data
+  become: true
+  ansible.builtin.template:
+    src: gitlab.ldif.j2
+    dest: "{{ openldap_config_gitlab.bootstrap_file }}"
     owner: "{{ openldap_config_user }}"
     group: "{{ openldap_config_user }}"
     mode: "0600"

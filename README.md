@@ -58,6 +58,57 @@ The `openldap_config` role generates the `slapd.conf` consumed by the
 container. It configures the database, base DN, administrator credentials,
 standard schemas, TLS, and custom-schema include path.
 
+## GitLab LDAP Authentication
+
+GitLab access is controlled with a dedicated `groupOfNames` group. The
+`memberof` overlay adds a computed `memberOf` attribute to users listed in a
+group, which GitLab uses in its LDAP user filter.
+
+Set these OpenLDAP inventory variables before initializing a new directory:
+
+```yaml
+openldap_config_gitlab:
+  enabled: true
+  memberof_enabled: true
+  bind_password: "store-this-in-ansible-vault"
+```
+
+This creates the following entries under the configured base DN:
+
+```text
+cn=gitlab-bind,ou=Services,<base DN>
+cn=gitlab-users,ou=Groups,<base DN>
+```
+
+`gitlab-bind` is the read-only account GitLab uses for LDAP searches. Keep its
+password in Ansible Vault or another secret source. `gitlab-users` is the
+access group; add each permitted person as a `member`, for example:
+
+```ldif
+dn: cn=gitlab-users,ou=Groups,dc=embtom,dc=org
+changetype: modify
+add: member
+member: uid=alice,ou=People,dc=embtom,dc=org
+```
+
+The user's resulting `memberOf` value is:
+
+```text
+cn=gitlab-users,ou=Groups,dc=embtom,dc=org
+```
+
+The GitLab service must use the same bind account, password, group DN, and the
+OpenLDAP server's root CA. Configure the corresponding
+`gitlab_service_ldap_*` variables in the `gitlab-infra` inventory: enable LDAP,
+use the OpenLDAP DNS name on LDAPS port `636`, set `simple_tls`, enable
+certificate verification, and set
+`gitlab_service_ldap_required_group_dn` to the `gitlab-users` DN.
+
+GitLab bootstrap LDIF is imported only when OpenLDAP creates an empty database.
+Enabling these values does not alter an existing directory. For an existing
+database, create the bind account and group separately, add authorized members,
+then enable the `memberof` overlay before deploying GitLab.
+
 ## Test LDAP
 
 Query the root DSE and verify that the service responds with its configured
@@ -185,6 +236,116 @@ The `pki` role creates host- and service-specific TLS artifacts, such as
 service role deploys them to the LDAP host and permits its rootless user to
 bind ports from 389 onward through
 `net.ipv4.ip_unprivileged_port_start`.
+
+## Configuration Reference
+
+Set role variables in inventory or through Ansible Vault. Values shown below
+are defaults. Do not store passwords in version control.
+
+### OpenLDAP Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `openldap_config_user` | `openldap` | Linux account that owns OpenLDAP configuration and data. |
+| `openldap_config_service_name` | `openldap` | Rootless systemd and container service name. |
+| `openldap_config_base_dn` | `dc=embtom,dc=org` | LDAP directory suffix. Changing it is a data migration. |
+| `openldap_config_organization` | `embtom` | Organization attribute on the root directory entry. |
+| `openldap_config_admin_password` | required | Password for `cn=admin,<base DN>`; supply it from Vault or another secret source. |
+| `openldap_config_tls_enabled` | `true` | Enables LDAPS listener and TLS configuration. |
+| `openldap_config_samba_enabled` | `true` | Includes the Samba schema and Samba-specific indexes. |
+| `openldap_config_gitlab.enabled` | `false` | Adds GitLab bootstrap entries on a new database; requires `memberof_enabled` and a bind password. |
+| `openldap_config_gitlab.memberof_enabled` | `false` | Enables the `memberof` overlay, which derives each entry's `memberOf` attribute from group membership. |
+| `openldap_config_gitlab.bind_cn` | `gitlab-bind` | CN of the GitLab read-only LDAP bind account. |
+| `openldap_config_gitlab.bind_password` | empty | Password for the GitLab bind account; required when GitLab integration is enabled. |
+| `openldap_config_gitlab.access_group` | `gitlab-users` | `groupOfNames` group used to allow GitLab sign-in. |
+| `openldap_config_schemas` | `[]` | Extra schemas, each with `filename` and inline `content`. |
+| `openldap_config_samba_schema` | `samba.schema` | Schema file list used when Samba support is enabled. |
+| `openldap_config_organizational_units` | `People`, `Groups`, `Services`, `Computers`, `Samba` | Organizational units created in a new database. |
+| `openldap_config_indexes` | standard LDAP indexes | Database indexes for general LDAP queries. |
+| `openldap_config_samba_indexes` | standard Samba indexes | Extra indexes added when Samba support is enabled. |
+| `openldap_config_dir` | `/var/lib/openldap/config` | Persistent host directory for generated configuration and bootstrap LDIF files. |
+| `openldap_config_file` | `<config dir>/slapd.conf` | Generated OpenLDAP configuration file. |
+| `openldap_config_bootstrap_file` | `<config dir>/bootstrap.ldif` | Base directory data imported only for an empty database. |
+| `openldap_config_gitlab.bootstrap_file` | `<config dir>/gitlab.ldif` | Optional GitLab entries imported only for an empty database. |
+
+### OpenLDAP Service
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `openldap_service_user` | `openldap_config_user` | Linux user that runs the rootless Podman service. |
+| `openldap_service_name` | `openldap_config_service_name` | Quadlet and container name. |
+| `openldap_service_container_method` | `image-pull` | Image source: `image-pull` downloads from a registry; `direct-build` builds and transfers locally. |
+| `openldap_service_direct_build_image` | `localhost/openldap:trixie` | Image tag used by `direct-build`. |
+| `openldap_service_image_pull_image` | `ghcr.io/embtom/openldap-infra/openldap:latest` | Registry image used by `image-pull`. |
+| `openldap_service_image` | selected by method | Effective image name; normally do not override it. |
+| `openldap_service_containerfile` | `container/openldap/Containerfile` | Containerfile used for local builds. |
+| `openldap_service_build_context` | `.` | Build context used for local builds. |
+| `openldap_service_build_extra_args` | empty | Additional arguments appended to `podman build`. |
+| `openldap_service_force_rebuild` | `false` | Removes the local image before a direct build. |
+| `openldap_service_data_dir` | `/var/lib/openldap/data` | Persistent LDAP database directory. |
+| `openldap_service_schema_dir` | `/var/lib/openldap/schema` | Host directory containing configured custom schemas. |
+| `openldap_service_unprivileged_port_start` | `389` | Lowest port the rootless service user may bind; managed with sysctl. |
+| `openldap_service_ldap_port` | `389` | Published unencrypted LDAP port. |
+| `openldap_service_ldaps_port` | `636` | Published LDAPS port when TLS is enabled. |
+| `openldap_service_tls_enabled` | `openldap_config_tls_enabled` | Enables TLS mounts and LDAPS publication. |
+| `openldap_service_tls_dir` | `/var/lib/openldap/tls` | Host directory containing the LDAP certificate and private key. |
+| `openldap_service_tls_server_name` | `openldap_external_host` | DNS name placed in the LDAP server certificate. |
+| `openldap_service_tls_certificate_name` | `<server name>-<service name>` | PKI artifact prefix for LDAP TLS files. |
+
+### LDAP Account Manager
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ldap_account_manager_enabled` | `true` | Deploys LAM when true. |
+| `ldap_account_manager_user` | `openldap_service_user` | Linux user that runs the rootless LAM service. |
+| `ldap_account_manager_service_name` | `lam` | Quadlet and container name. |
+| `ldap_account_manager_container_method` | `image-pull` | Image source: `image-pull` or `direct-build`. |
+| `ldap_account_manager_direct_build_image` | `localhost/ldap-account-manager:trixie` | Image tag used by `direct-build`. |
+| `ldap_account_manager_image_pull_image` | `ghcr.io/embtom/openldap-infra/ldap-account-manager:latest` | Registry image used by `image-pull`. |
+| `ldap_account_manager_image` | selected by method | Effective image name; normally do not override it. |
+| `ldap_account_manager_containerfile` | `container/ldap-account-manager/Containerfile` | Containerfile used for local builds. |
+| `ldap_account_manager_build_context` | `.` | Build context used for local builds. |
+| `ldap_account_manager_build_extra_args` | empty | Additional arguments appended to `podman build`. |
+| `ldap_account_manager_force_rebuild` | `false` | Removes the local image before a direct build. |
+| `ldap_account_manager_config_dir` | `/var/lib/ldap-account-manager/config` | Persistent LAM configuration directory. |
+| `ldap_account_manager_data_dir` | `/var/lib/ldap-account-manager/data` | Persistent LAM sessions, temporary files, and logs. |
+| `ldap_account_manager_https_port` | `8443` | Published HTTPS port. |
+| `ldap_account_manager_tls_enabled` | `openldap_config_tls_enabled` | Enables the HTTPS certificate mount and published HTTPS port. |
+| `ldap_account_manager_tls_dir` | `/var/lib/ldap-account-manager/tls` | Host directory containing the LAM web certificate and private key. |
+| `ldap_account_manager_tls_server_name` | `openldap_external_host` | DNS name placed in the LAM HTTPS certificate. |
+| `ldap_account_manager_tls_certificate_name` | `<hostname>-lam` | PKI artifact prefix for LAM TLS files. |
+| `ldap_account_manager_profile_name` | `openldap` | LAM server-profile name created at startup. |
+| `ldap_account_manager_server_url` | `ldaps://openldap:636` | LDAP endpoint used inside the private Podman network. |
+| `ldap_account_manager_base_dn` | `openldap_config_base_dn` | Directory suffix configured in the LAM server profile. |
+| `ldap_account_manager_ca_certificate` | `pki_root_ca_certificate` | Root CA file LAM trusts for LDAPS. |
+| `ldap_account_manager_log_destination` | `/var/lib/ldap-account-manager/data/lam.log` | LAM application log file, forwarded to the container journal. |
+
+### Schema Role
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `openldap_schema_dir` | `/var/lib/openldap/schema` | Destination directory for rendered custom schema files. |
+| `openldap_schema_schemas` | `openldap_config_schemas` | General custom schema list. |
+| `openldap_schema_samba_schemas` | `openldap_config_samba_schema` | Samba schema list. |
+
+### PKI Role
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `pki_root_ca_common_name` | `embtom Infrastructure Root CA` | Subject CN of the root certificate authority. |
+| `pki_country` | `DE` | X.509 subject country for generated certificates. |
+| `pki_state` | `Bayern` | X.509 subject state for generated certificates. |
+| `pki_organization` | `embtom` | X.509 subject organization for generated certificates. |
+| `pki_controller_root_dir` | `~/.local/share/embtom/pki` | Controller-side PKI state directory. Protect and back it up. |
+| `pki_root_ca_key` | `<root dir>/private/root-ca.key` | Root CA private key path. |
+| `pki_root_ca_csr` | `<root dir>/csr/root-ca.csr` | Root CA certificate-signing request path. |
+| `pki_root_ca_certificate` | `<root dir>/certs/root-ca.crt` | Root CA certificate path. |
+| `pki_intermediate_ca_common_name` | `embtom Infrastructure Issuing CA` | Subject CN of the issuing CA. |
+| `pki_intermediate_ca_dir` | `<root dir>/intermediate` | Controller-side issuing CA state directory. |
+| `pki_intermediate_ca_key` | `<intermediate dir>/private/intermediate-ca.key` | Issuing CA private key path. |
+| `pki_intermediate_ca_csr` | `<intermediate dir>/csr/intermediate-ca.csr` | Issuing CA certificate-signing request path. |
+| `pki_intermediate_ca_certificate` | `<intermediate dir>/certs/intermediate-ca.crt` | Issuing CA certificate path. |
+| `pki_server_certificates` | defined by playbook | Certificate request list. Each item requires `name`, `common_name`, and `subject_alt_names`. |
 
 ## LDAP Account Manager Networking
 

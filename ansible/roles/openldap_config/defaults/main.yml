@@ -5,6 +5,15 @@ openldap_config_base_dn: dc=embtom,dc=org
 openldap_config_organization: embtom
 openldap_config_tls_enabled: true
 openldap_config_samba_enabled: true
+# GitLab LDAP integration settings
+openldap_config_gitlab:
+  enabled: false
+  memberof_enabled: false
+  bind_cn: gitlab-bind
+  bind_password: ""
+  access_group: gitlab-users
+  bootstrap_file: "{{ openldap_config_dir }}/gitlab.ldif"
+
 openldap_config_schemas: []
 openldap_config_samba_schema:
   - filename: samba.schema
@@ -20,6 +29,7 @@ openldap_config_indexes:
   - cn,sn,uid eq,pres,sub
   - uidNumber,gidNumber eq
   - member,memberUid eq
+  - memberOf eq
   - uniqueMember eq,pres
   - loginShell eq
 openldap_config_samba_indexes:
