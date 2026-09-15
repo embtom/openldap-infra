@@ -1,0 +1,16 @@
+{% if openldap_config_gitlab.enabled | bool %}
+dn: cn={{ openldap_config_gitlab.bind_cn }},ou=Services,{{ openldap_config_base_dn }}
+objectClass: top
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: {{ openldap_config_gitlab.bind_cn }}
+description: GitLab LDAP read-only bind account
+userPassword: {CRYPT}{{ openldap_config_gitlab.bind_password | password_hash('sha512') }}
+
+dn: cn={{ openldap_config_gitlab.access_group }},ou=Groups,{{ openldap_config_base_dn }}
+objectClass: top
+objectClass: groupOfNames
+cn: {{ openldap_config_gitlab.access_group }}
+description: GitLab sign-in access group
+member: cn={{ openldap_config_gitlab.bind_cn }},ou=Services,{{ openldap_config_base_dn }}
+{% endif %}
