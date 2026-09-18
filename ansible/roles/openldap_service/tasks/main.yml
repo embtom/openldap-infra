@@ -23,6 +23,24 @@
     - name: Include OpenLDAP service user tasks
       ansible.builtin.include_tasks: user.yml
 
+- name: Stop OpenLDAP service before recreating its database
+  become: true
+  become_user: "{{ openldap_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openldap_service_user_uid }}"
+  ansible.builtin.systemd:
+    name: "{{ openldap_service_name }}.service"
+    scope: user
+    state: stopped
+  when: openldap_service_data_recreate | bool
+
+- name: Remove OpenLDAP database when recreating data
+  become: true
+  ansible.builtin.file:
+    path: "{{ openldap_service_data_dir }}"
+    state: absent
+  when: openldap_service_data_recreate | bool
+
 - name: Validate OpenLDAP container method
   ansible.builtin.assert:
     that:

@@ -14,14 +14,19 @@ ansible-playbook -i ansible/inventories/hosts.yml \
 
 ## Deploy with Ansible
 
-Install the required collection, set the administrator password in the inventory
-(preferably through Ansible Vault), then run the playbook:
+Create an encrypted Vault containing the LDAP administrator and GitLab bind
+passwords, then run a deployment task:
 
 ```sh
-ansible-galaxy collection install -r ansible/requirements.yml
-ansible-playbook -i inventory.yml ansible/playbooks/openldap_setup.yml \
-  -e openldap_config_admin_password='use-a-secret-manager-or-vault'
+python3 scripts/create-ldap-vault.py
+./scripts/deploy --host localhost
 ```
+
+The script writes an encrypted local file at
+`ansible/inventories/group_vars/all/vault.yml`, which is ignored by Git. It
+prompts for a Vault password and for the two LDAP passwords. Deployments prompt
+for the Vault password and the sudo password; no LDAP password is passed on the
+command line.
 
 By default, the `openldap_service` and `ldap_account_manager` roles pull their
 published GHCR images. The generated Quadlets use `Pull=always`:
@@ -50,9 +55,11 @@ Changing `openldap_config_base_dn` does not migrate a persistent directory.
 Before changing the suffix on an existing deployment, export and back up the
 directory, update every DN and DN-valued attribute for the new suffix, then
 import the transformed LDIF into a new empty data directory. For disposable
-development data, use `scripts/purge-openldap` and deploy again instead. Do
-not change the suffix and restart an existing database: OpenLDAP cannot rename
-an LDAP tree automatically.
+development data, set `openldap_service_data_recreate: true` for one deploy.
+This stops OpenLDAP and removes only `/var/lib/openldap/data`; the next start
+creates a fresh database from the bootstrap LDIF files. Set it back to `false`
+afterwards. Do not change the suffix and restart an existing database:
+OpenLDAP cannot rename an LDAP tree automatically.
 
 The `openldap_config` role generates the `slapd.conf` consumed by the
 container. It configures the database, base DN, administrator credentials,
@@ -70,7 +77,6 @@ Set these OpenLDAP inventory variables before initializing a new directory:
 openldap_config_gitlab:
   enabled: true
   memberof_enabled: true
-  bind_password: "store-this-in-ansible-vault"
 ```
 
 This creates the following entries under the configured base DN:
@@ -133,6 +139,15 @@ To test unencrypted LDAP on port 389, select the LDAP protocol explicitly:
 ```sh
 ./scripts/test-openldap --protocol ldap
 ```
+
+Verify the GitLab LDAP integration, including the bind account, access group,
+and users that pass the `memberOf` access filter:
+
+```sh
+./scripts/test-gitlab-ldap
+```
+
+The script prompts once for the GitLab bind password and does not modify LDAP.
 
 Print the active schema as published by the LDAP server:
 
@@ -250,13 +265,13 @@ are defaults. Do not store passwords in version control.
 | `openldap_config_service_name` | `openldap` | Rootless systemd and container service name. |
 | `openldap_config_base_dn` | `dc=embtom,dc=org` | LDAP directory suffix. Changing it is a data migration. |
 | `openldap_config_organization` | `embtom` | Organization attribute on the root directory entry. |
-| `openldap_config_admin_password` | required | Password for `cn=admin,<base DN>`; supply it from Vault or another secret source. |
+| `openldap_config_admin_password` | required | Password for `cn=admin,<base DN>`; generated in the local Vault. |
 | `openldap_config_tls_enabled` | `true` | Enables LDAPS listener and TLS configuration. |
 | `openldap_config_samba_enabled` | `true` | Includes the Samba schema and Samba-specific indexes. |
 | `openldap_config_gitlab.enabled` | `false` | Adds GitLab bootstrap entries on a new database; requires `memberof_enabled` and a bind password. |
 | `openldap_config_gitlab.memberof_enabled` | `false` | Enables the `memberof` overlay, which derives each entry's `memberOf` attribute from group membership. |
 | `openldap_config_gitlab.bind_cn` | `gitlab-bind` | CN of the GitLab read-only LDAP bind account. |
-| `openldap_config_gitlab.bind_password` | empty | Password for the GitLab bind account; required when GitLab integration is enabled. |
+| `openldap_config_gitlab.bind_password` | required | Password for the GitLab bind account; generated in the local Vault. |
 | `openldap_config_gitlab.access_group` | `gitlab-users` | `groupOfNames` group used to allow GitLab sign-in. |
 | `openldap_config_schemas` | `[]` | Extra schemas, each with `filename` and inline `content`. |
 | `openldap_config_samba_schema` | `samba.schema` | Schema file list used when Samba support is enabled. |
@@ -283,6 +298,7 @@ are defaults. Do not store passwords in version control.
 | `openldap_service_build_extra_args` | empty | Additional arguments appended to `podman build`. |
 | `openldap_service_force_rebuild` | `false` | Removes the local image before a direct build. |
 | `openldap_service_data_dir` | `/var/lib/openldap/data` | Persistent LDAP database directory. |
+| `openldap_service_data_recreate` | `false` | Stops OpenLDAP and deletes only the database directory before deployment. The next start imports fresh bootstrap data. Destructive; return it to `false` after one deploy. |
 | `openldap_service_schema_dir` | `/var/lib/openldap/schema` | Host directory containing configured custom schemas. |
 | `openldap_service_unprivileged_port_start` | `389` | Lowest port the rootless service user may bind; managed with sysctl. |
 | `openldap_service_ldap_port` | `389` | Published unencrypted LDAP port. |

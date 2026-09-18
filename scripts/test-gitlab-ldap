@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LDAP_HOST="$(hostname --fqdn 2>/dev/null || hostname)"
+LDAP_PROTOCOL="ldaps"
+LDAP_PORT=""
+LDAP_BASE_DN="dc=embtom,dc=org"
+LDAP_BIND_DN="cn=gitlab-bind,ou=Services,dc=embtom,dc=org"
+LDAP_ACCESS_GROUP_DN="cn=gitlab-users,ou=Groups,dc=embtom,dc=org"
+LDAP_CA_CERT="${HOME}/.local/share/embtom/pki/certs/root-ca.crt"
+
+usage() {
+  cat <<EOF
+Usage: $0 [--host HOST] [--protocol ldap|ldaps] [--port PORT] [--base-dn BASE_DN] [--bind-dn BIND_DN] [--access-group-dn GROUP_DN] [--ca-cert PATH]
+
+  -H, --host HOST               LDAP host (default: local FQDN)
+  -P, --protocol PROTOCOL       ldap or ldaps (default: ldaps)
+  -p, --port PORT               Port (default: 389 for ldap, 636 for ldaps)
+  -b, --base-dn BASE_DN         LDAP base DN (default: $LDAP_BASE_DN)
+  -D, --bind-dn BIND_DN         GitLab bind DN (default: $LDAP_BIND_DN)
+  -g, --access-group-dn GROUP_DN
+                               GitLab access group DN (default: $LDAP_ACCESS_GROUP_DN)
+  -c, --ca-cert PATH            Root CA certificate for ldaps
+                               (default: $LDAP_CA_CERT)
+      --help                     Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -H | --host)
+    LDAP_HOST="${2:?Missing host value}"
+    shift 2
+    ;;
+  -P | --protocol)
+    LDAP_PROTOCOL="${2:?Missing protocol value}"
+    shift 2
+    ;;
+  -p | --port)
+    LDAP_PORT="${2:?Missing port value}"
+    shift 2
+    ;;
+  -b | --base-dn)
+    LDAP_BASE_DN="${2:?Missing base DN value}"
+    shift 2
+    ;;
+  -D | --bind-dn)
+    LDAP_BIND_DN="${2:?Missing bind DN value}"
+    shift 2
+    ;;
+  -g | --access-group-dn)
+    LDAP_ACCESS_GROUP_DN="${2:?Missing access group DN value}"
+    shift 2
+    ;;
+  -c | --ca-cert)
+    LDAP_CA_CERT="${2:?Missing CA certificate path}"
+    shift 2
+    ;;
+  --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 1
+    ;;
+  esac
+done
+
+case "$LDAP_PROTOCOL" in
+ldap)
+  LDAP_PORT="${LDAP_PORT:-389}"
+  ;;
+ldaps)
+  LDAP_PORT="${LDAP_PORT:-636}"
+  if [[ ! -f "$LDAP_CA_CERT" ]]; then
+    echo "ERROR: Root CA certificate '$LDAP_CA_CERT' does not exist." >&2
+    exit 1
+  fi
+  ;;
+*)
+  echo "ERROR: Protocol must be 'ldap' or 'ldaps', not '$LDAP_PROTOCOL'." >&2
+  exit 1
+  ;;
+esac
+
+LDAP_URI="${LDAP_PROTOCOL}://${LDAP_HOST}:${LDAP_PORT}"
+LDAP_ENV=()
+if [[ "$LDAP_PROTOCOL" == "ldaps" ]]; then
+  LDAP_ENV=(LDAPTLS_CACERT="$LDAP_CA_CERT" LDAPTLS_REQCERT=demand)
+fi
+
+ldap_query() {
+  env "${LDAP_ENV[@]}" ldapsearch -x -LLL -o ldif-wrap=no -H "$LDAP_URI" "$@"
+}
+
+LDAP_PASSWORD_FILE="$(mktemp)"
+chmod 0600 "$LDAP_PASSWORD_FILE"
+trap 'rm -f "$LDAP_PASSWORD_FILE"' EXIT
+
+echo "==> Checking LDAP root DSE at $LDAP_URI"
+ldap_query -b "" -s base namingContexts >/dev/null
+
+echo "==> Authenticating GitLab bind account: $LDAP_BIND_DN"
+read -r -s -p "    GitLab bind password: " LDAP_BIND_PASSWORD
+printf '\n'
+printf '%s' "$LDAP_BIND_PASSWORD" >"$LDAP_PASSWORD_FILE"
+unset LDAP_BIND_PASSWORD
+
+ldap_bind_query() {
+  ldap_query -D "$LDAP_BIND_DN" -y "$LDAP_PASSWORD_FILE" "$@"
+}
+
+echo "==> Checking GitLab bind account"
+ldap_bind_query -b "$LDAP_BIND_DN" -s base dn objectClass cn |
+  grep -qx 'objectClass: simpleSecurityObject'
+
+echo "==> Checking GitLab access group"
+ldap_bind_query -b "$LDAP_ACCESS_GROUP_DN" -s base \
+  dn objectClass cn member |
+  grep -qx 'objectClass: groupOfNames'
+
+echo "==> Users authorized for GitLab"
+AUTHORIZED_USERS="$(ldap_bind_query -b "ou=People,$LDAP_BASE_DN" \
+  "(&(objectClass=inetOrgPerson)(memberOf=$LDAP_ACCESS_GROUP_DN))" dn uid cn mail memberOf)"
+if [[ -n "$AUTHORIZED_USERS" ]]; then
+  printf '%s\n' "$AUTHORIZED_USERS"
+else
+  echo "    No authorized users yet. Add a person to $LDAP_ACCESS_GROUP_DN."
+fi
+
+echo "==> GitLab LDAP integration checks passed."

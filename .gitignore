@@ -19,6 +19,7 @@ venv/
 .vault_pass
 .vault_pass.txt
 *.vault-pass
+ansible/inventories/group_vars/all/vault.yml
 
 # Logs and temporary files
 *.log

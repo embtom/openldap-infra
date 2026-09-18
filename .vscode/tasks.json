@@ -46,14 +46,20 @@
       ]
     },
     {
+      "label": "ansible: create LDAP secrets vault",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/scripts/create-ldap-vault.py",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "ansible: run all roles",
       "type": "shell",
       "command": "${workspaceFolder}/scripts/deploy --host ${input:remoteHost}",
-      "options": {
-        "env": {
-          "OPENLDAP_CONFIG_ADMIN_PASSWORD": "${input:ldapAdminPassword}"
-        }
-      },
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -65,11 +71,17 @@
       "label": "ansible: run by tag",
       "type": "shell",
       "command": "${workspaceFolder}/scripts/deploy --host ${input:remoteHost} --tag ${input:roleTag}",
-      "options": {
-        "env": {
-          "OPENLDAP_CONFIG_ADMIN_PASSWORD": "${input:ldapAdminPassword}"
-        }
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
       },
+      "problemMatcher": []
+    },
+    {
+      "label": "ansible: recreate OpenLDAP database",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/deploy --host ${input:remoteHost} --tag config,service --recreate-data",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -96,12 +108,6 @@
       "type": "promptString",
       "description": "Remote SSH host or SSH config alias",
       "default": "localhost"
-    },
-    {
-      "id": "ldapAdminPassword",
-      "type": "promptString",
-      "description": "Enter the LDAP administrator password",
-      "password": true
     }
   ]
 }
