@@ -1,0 +1,30 @@
+---
+- name: Deploy OpenLDAP configuration
+  become: true
+  ansible.builtin.template:
+    src: slapd.conf.j2
+    dest: "{{ openldap_config_file }}"
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Deploy OpenLDAP bootstrap data
+  become: true
+  ansible.builtin.template:
+    src: bootstrap.ldif.j2
+    dest: "{{ openldap_config_bootstrap_file }}"
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Deploy OpenLDAP GitLab bootstrap data
+  become: true
+  ansible.builtin.template:
+    src: gitlab.ldif.j2
+    dest: "{{ openldap_config_gitlab.bootstrap_file }}"
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0600"
+  no_log: true

@@ -7,16 +7,19 @@ REPOSITORY_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
 HOST=""
 TAG=""
 RECREATE_DATA=false
+RECREATE_ALL=false
 VAULT_FILE="${REPOSITORY_DIR}/ansible/inventories/group_vars/all/vault.yml"
 
 usage() {
   cat <<EOF
-Usage: $0 [--host HOST] [--tag TAG] [--recreate-data]
+Usage: $0 [--host HOST] [--tag TAG] [--recreate-data] [--recreate-all]
 
   -H, --host HOST   Deploy to a remote host over SSH (default: localhost)
   -t, --tag TAG     Run only the specified Ansible tag
       --recreate-data
                      Delete and recreate the OpenLDAP database during deploy
+      --recreate-all
+             Delete and recreate OpenLDAP data, configuration, and schemas
       --help        Show this help
 EOF
 }
@@ -33,6 +36,10 @@ while [[ $# -gt 0 ]]; do
     ;;
   --recreate-data)
     RECREATE_DATA=true
+    shift
+    ;;
+  --recreate-all)
+    RECREATE_ALL=true
     shift
     ;;
   --help)
@@ -71,6 +78,9 @@ fi
 EXTRA_VARS=()
 if [[ "${RECREATE_DATA}" == true ]]; then
   EXTRA_VARS+=(--extra-vars "openldap_service_data_recreate=true")
+fi
+if [[ "${RECREATE_ALL}" == true ]]; then
+  EXTRA_VARS+=(--extra-vars "openldap_service_full_recreate=true")
 fi
 
 (

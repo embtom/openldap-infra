@@ -88,6 +88,17 @@
         "focus": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "ansible: fully recreate OpenLDAP",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/deploy --host ${input:remoteHost} --tag config,service --recreate-all",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
     }
   ],
   "inputs": [
@@ -98,7 +109,6 @@
       "options": [
         "openldap",
         "config",
-        "schema",
         "service",
         "ldap-account-manager"
       ]

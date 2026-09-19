@@ -61,6 +61,12 @@ creates a fresh database from the bootstrap LDIF files. Set it back to `false`
 afterwards. Do not change the suffix and restart an existing database:
 OpenLDAP cannot rename an LDAP tree automatically.
 
+For a complete local reset, set `openldap_service_full_recreate: true` for one
+deploy. It stops OpenLDAP and removes the data, generated configuration, and
+schema directories before rendering and starting the service again. TLS
+material and the service user are retained. The VS Code task `ansible: fully
+recreate OpenLDAP` runs this reset with the required `config,service` tags.
+
 The `openldap_config` role generates the `slapd.conf` consumed by the
 container. It configures the database, base DN, administrator credentials,
 standard schemas, TLS, and custom-schema include path.
@@ -220,7 +226,7 @@ authenticated users. The LDAP administrator has full access.
 
 ## Custom Schemas
 
-Declare custom schema files with the `openldap_schema` role in the inventory.
+Declare custom schema files with the `openldap_config` role in the inventory.
 Ansible writes them to
 `/var/lib/openldap/schema`, and the Quadlet mounts that directory read-only at
 `/etc/ldap/custom-schema`. The generated `slapd.conf` includes every
@@ -275,6 +281,7 @@ are defaults. Do not store passwords in version control.
 | `openldap_config_gitlab.access_group` | `gitlab-users` | `groupOfNames` group used to allow GitLab sign-in. |
 | `openldap_config_schemas` | `[]` | Extra schemas, each with `filename` and inline `content`. |
 | `openldap_config_samba_schema` | `samba.schema` | Schema file list used when Samba support is enabled. |
+| `openldap_config_schema_dir` | `/var/lib/openldap/schema` | Destination directory for configured custom schema files. |
 | `openldap_config_organizational_units` | `People`, `Groups`, `Services`, `Computers`, `Samba` | Organizational units created in a new database. |
 | `openldap_config_indexes` | standard LDAP indexes | Database indexes for general LDAP queries. |
 | `openldap_config_samba_indexes` | standard Samba indexes | Extra indexes added when Samba support is enabled. |
@@ -299,6 +306,7 @@ are defaults. Do not store passwords in version control.
 | `openldap_service_force_rebuild` | `false` | Removes the local image before a direct build. |
 | `openldap_service_data_dir` | `/var/lib/openldap/data` | Persistent LDAP database directory. |
 | `openldap_service_data_recreate` | `false` | Stops OpenLDAP and deletes only the database directory before deployment. The next start imports fresh bootstrap data. Destructive; return it to `false` after one deploy. |
+| `openldap_service_full_recreate` | `false` | Stops OpenLDAP and deletes the data, generated configuration, and schema directories before deployment. TLS material and the service user remain. Destructive; return it to `false` after one deploy. |
 | `openldap_service_schema_dir` | `/var/lib/openldap/schema` | Host directory containing configured custom schemas. |
 | `openldap_service_unprivileged_port_start` | `389` | Lowest port the rootless service user may bind; managed with sysctl. |
 | `openldap_service_ldap_port` | `389` | Published unencrypted LDAP port. |
@@ -335,14 +343,6 @@ are defaults. Do not store passwords in version control.
 | `ldap_account_manager_base_dn` | `openldap_config_base_dn` | Directory suffix configured in the LAM server profile. |
 | `ldap_account_manager_ca_certificate` | `pki_root_ca_certificate` | Root CA file LAM trusts for LDAPS. |
 | `ldap_account_manager_log_destination` | `/var/lib/ldap-account-manager/data/lam.log` | LAM application log file, forwarded to the container journal. |
-
-### Schema Role
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `openldap_schema_dir` | `/var/lib/openldap/schema` | Destination directory for rendered custom schema files. |
-| `openldap_schema_schemas` | `openldap_config_schemas` | General custom schema list. |
-| `openldap_schema_samba_schemas` | `openldap_config_samba_schema` | Samba schema list. |
 
 ### PKI Role
 
