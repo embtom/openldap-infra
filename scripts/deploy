@@ -71,7 +71,7 @@ fi
 
 if [[ ! -f "${VAULT_FILE}" ]]; then
   echo "ERROR: LDAP secrets vault '${VAULT_FILE}' does not exist." >&2
-  echo "Run 'python3 ${REPOSITORY_DIR}/scripts/create-ldap-vault.py' first." >&2
+  echo "Run 'python3 ${REPOSITORY_DIR}/scripts/configure-openldap.py' first." >&2
   exit 1
 fi
 

@@ -5,28 +5,28 @@ a rootless Podman Quadlet managed by a systemd user service.
 
 [![CI](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml/badge.svg)](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml)
 
-## Build the Image
+## VS Code Tasks
 
-```sh
-ansible-playbook -i ansible/inventories/hosts.yml \
-  ansible/playbooks/openldap_setup.yml
-```
+Run `Tasks: Run Task` from the Command Palette, then choose an `ansible:` task.
+Tasks that deploy prompt for the SSH host (default: `localhost`); the tagged
+deployment also prompts for `openldap`, `config`, `service`, or
+`ldap-account-manager`.
 
-## Deploy with Ansible
+| Task | Command | Use |
+| --- | --- | --- |
+| `ansible: install` | `scripts/install-requirements && scripts/install-ansible` | Install the Python and Ansible dependencies once. |
+| `ansible: lint` | `scripts/ansible-lint` | Check the Ansible code before deployment. |
+| `ansible: configure OpenLDAP` | `python3 scripts/configure-openldap.py` | Create the local configuration and encrypted Vault. Run before the first deployment. |
+| `ansible: run all roles` | `scripts/deploy --host <host>` | Build or obtain images, configure OpenLDAP, and start all enabled services. |
+| `ansible: run by tag` | `scripts/deploy --host <host> --tag <tag>` | Deploy only one area while iterating. |
+| `ansible: recreate OpenLDAP database` | `scripts/deploy --host <host> --tag config,service --recreate-data` | Delete only LDAP data, then initialize a fresh database. Destructive. |
+| `ansible: fully recreate OpenLDAP` | `scripts/deploy --host <host> --tag config,service --recreate-all` | Delete LDAP data, generated configuration, and schemas before redeploying. Destructive. |
 
-Create an encrypted Vault containing the LDAP administrator and GitLab bind
-passwords, then run a deployment task:
-
-```sh
-python3 scripts/create-ldap-vault.py
-./scripts/deploy --host localhost
-```
-
-The script writes an encrypted local file at
-`ansible/inventories/group_vars/all/vault.yml`, which is ignored by Git. It
-prompts for a Vault password and for the two LDAP passwords. Deployments prompt
-for the Vault password and the sudo password; no LDAP password is passed on the
-command line.
+The configuration task asks whether to enable GitLab LDAP authentication. It
+writes non-secret settings to `ansible/inventories/group_vars/all/config.yml`
+and passwords to the encrypted, Git-ignored
+`ansible/inventories/group_vars/all/vault.yml`. Deployments prompt for the
+Vault and sudo passwords; LDAP passwords are never command-line arguments.
 
 By default, the `openldap_service` and `ldap_account_manager` roles pull their
 published GHCR images. The generated Quadlets use `Pull=always`:
@@ -45,31 +45,12 @@ To build from the local checkout instead, set either role's
 controller, transferred into the service user's rootless Podman storage, and
 the Quadlet uses `Pull=never`.
 
-Persistent LDAP data is stored at `/var/lib/openldap/data`. The
-`openldap_config` role prepares the initial base entry and `cn=admin` account
-from `openldap_config_base_dn`, `openldap_config_organization`, and
-`openldap_config_admin_password`; the container imports this data only when it
-creates a new database.
-
-Changing `openldap_config_base_dn` does not migrate a persistent directory.
-Before changing the suffix on an existing deployment, export and back up the
-directory, update every DN and DN-valued attribute for the new suffix, then
-import the transformed LDIF into a new empty data directory. For disposable
-development data, set `openldap_service_data_recreate: true` for one deploy.
-This stops OpenLDAP and removes only `/var/lib/openldap/data`; the next start
-creates a fresh database from the bootstrap LDIF files. Set it back to `false`
-afterwards. Do not change the suffix and restart an existing database:
-OpenLDAP cannot rename an LDAP tree automatically.
-
-For a complete local reset, set `openldap_service_full_recreate: true` for one
-deploy. It stops OpenLDAP and removes the data, generated configuration, and
-schema directories before rendering and starting the service again. TLS
-material and the service user are retained. The VS Code task `ansible: fully
-recreate OpenLDAP` runs this reset with the required `config,service` tags.
-
-The `openldap_config` role generates the `slapd.conf` consumed by the
-container. It configures the database, base DN, administrator credentials,
-standard schemas, TLS, and custom-schema include path.
+OpenLDAP data lives in `/var/lib/openldap/data`; bootstrap entries are imported
+only for a new database. A changed `openldap_config_base_dn` requires an LDAP
+data migration, not a restart. Export and transform all DN-valued data before
+importing it into a new directory. For disposable data, use the database-reset
+task above. The complete-reset task additionally removes generated
+configuration and schemas; TLS material and the service user remain.
 
 ## GitLab LDAP Authentication
 
@@ -77,13 +58,17 @@ GitLab access is controlled with a dedicated `groupOfNames` group. The
 `memberof` overlay adds a computed `memberOf` attribute to users listed in a
 group, which GitLab uses in its LDAP user filter.
 
-Set these OpenLDAP inventory variables before initializing a new directory:
+GitLab LDAP integration is disabled by default. The configuration script can
+enable it, or set these inventory variables explicitly before initializing a
+new directory:
 
 ```yaml
-openldap_config_gitlab:
-  enabled: true
-  memberof_enabled: true
+openldap_config_gitlab_enabled: true
+openldap_config_gitlab_memberof_enabled: true
 ```
+
+The GitLab bind password is stored in the local Ansible Vault as
+`openldap_config_gitlab_bind_password`.
 
 This creates the following entries under the configured base DN:
 

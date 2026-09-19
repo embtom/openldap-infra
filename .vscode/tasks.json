@@ -46,9 +46,9 @@
       ]
     },
     {
-      "label": "ansible: create LDAP secrets vault",
+      "label": "ansible: configure OpenLDAP",
       "type": "shell",
-      "command": "python3 ${workspaceFolder}/scripts/create-ldap-vault.py",
+      "command": "python3 ${workspaceFolder}/scripts/configure-openldap.py",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",

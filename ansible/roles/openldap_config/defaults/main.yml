@@ -6,11 +6,13 @@ openldap_config_organization: embtom
 openldap_config_tls_enabled: true
 openldap_config_samba_enabled: true
 # GitLab LDAP integration settings
+openldap_config_gitlab_enabled: false
+openldap_config_gitlab_memberof_enabled: false
 openldap_config_gitlab:
-  enabled: true
-  memberof_enabled: true
+  enabled: "{{ openldap_config_gitlab_enabled }}"
+  memberof_enabled: "{{ openldap_config_gitlab_memberof_enabled }}"
   bind_cn: gitlab-bind
-  bind_password: "{{ openldap_config_gitlab_bind_password }}"
+  bind_password: "{{ openldap_config_gitlab_bind_password | default('') }}"
   access_group: gitlab-users
   bootstrap_file: "{{ openldap_config_dir }}/gitlab.ldif"
 

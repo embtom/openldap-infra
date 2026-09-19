@@ -1,7 +1,7 @@
 ---
 openldap_service_user: "{{ openldap_config_user }}"
 openldap_service_name: "{{ openldap_config_service_name }}"
-openldap_service_container_method: direct-build
+openldap_service_container_method: image-pull
 openldap_service_direct_build_image: localhost/openldap:trixie
 openldap_service_image_pull_image: ghcr.io/embtom/openldap-infra/openldap:latest
 openldap_service_image: >-
