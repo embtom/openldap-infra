@@ -19,6 +19,7 @@ $profile->set_ServerURL($serverUrl);
 $profile->setUseTLS('no');
 $profile->set_Suffix('user', 'ou=People,' . $baseDn);
 $profile->set_Suffix('group', 'ou=Groups,' . $baseDn);
+$profile->set_Suffix('smbDomain', 'ou=Samba,' . $baseDn);
 $profile->set_Adminstring('cn=admin,' . $baseDn);
 $profile->setServerDisplayName('OpenLDAP');
 
