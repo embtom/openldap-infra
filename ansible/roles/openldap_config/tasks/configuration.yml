@@ -28,3 +28,13 @@
     group: "{{ openldap_config_user }}"
     mode: "0600"
   no_log: true
+
+- name: Deploy OpenLDAP Samba domain bootstrap data
+  become: true
+  ansible.builtin.template:
+    src: samba-domain.ldif.j2
+    dest: "{{ openldap_config_samba.domain.bootstrap_file }}"
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0600"
+  no_log: true

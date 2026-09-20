@@ -4,6 +4,7 @@ set -eu
 config_file=/etc/ldap/slapd.d/slapd.conf
 bootstrap_file=/etc/ldap/slapd.d/bootstrap.ldif
 gitlab_bootstrap_file=/etc/ldap/slapd.d/gitlab.ldif
+samba_domain_bootstrap_file=/etc/ldap/slapd.d/samba-domain.ldif
 database_file=/var/lib/ldap/data.mdb
 
 if [ ! -r "$config_file" ]; then
@@ -22,6 +23,10 @@ if [ ! -f "$database_file" ]; then
   if [ -s "$gitlab_bootstrap_file" ]; then
     echo "Importing GitLab bootstrap LDIF."
     slapadd -f "$config_file" -n 1 -l "$gitlab_bootstrap_file"
+  fi
+  if [ -s "$samba_domain_bootstrap_file" ]; then
+    echo "Importing Samba domain bootstrap LDIF."
+    slapadd -f "$config_file" -n 1 -l "$samba_domain_bootstrap_file"
   fi
 else
   echo "Using existing OpenLDAP database."

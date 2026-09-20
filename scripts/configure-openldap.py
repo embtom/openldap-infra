@@ -36,6 +36,13 @@ def confirm(prompt: str) -> bool:
     return input(f"{prompt} [y/N] ").lower() in {"y", "yes"}
 
 
+def read_samba_domain_setting(label: str) -> str:
+    value = input(f"{label}: ").strip()
+    if not value:
+        raise ValueError(f"{label} must not be empty.")
+    return value
+
+
 def write_file_atomically(path: Path, content: str, mode: int) -> None:
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", dir=path.parent, delete=False
@@ -88,6 +95,7 @@ def main() -> int:
         return 0
 
     gitlab_enabled = confirm("Enable GitLab LDAP authentication?")
+    samba_domain_enabled = confirm("Bootstrap a Samba domain for LAM?")
     try:
         secrets = {
             "openldap_config_admin_password": read_secret("LDAP administrator password")
@@ -96,13 +104,36 @@ def main() -> int:
             secrets["openldap_config_gitlab_bind_password"] = read_secret(
                 "GitLab bind password"
             )
+        samba_domain = {}
+        if samba_domain_enabled:
+            samba_domain = {
+                "name": read_samba_domain_setting("Samba domain name"),
+                "sid": read_samba_domain_setting("Samba domain SID"),
+            }
     except ValueError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1
 
     configuration = {
-        "openldap_config_gitlab_enabled": gitlab_enabled,
-        "openldap_config_gitlab_memberof_enabled": gitlab_enabled,
+        "openldap_config_gitlab": {
+            "enabled": gitlab_enabled,
+            "memberof_enabled": gitlab_enabled,
+            "bind_cn": "gitlab-bind",
+            "bind_password": "{{ openldap_config_gitlab_bind_password | default('') }}",
+            "access_group": "gitlab-users",
+            "bootstrap_file": "{{ openldap_config_dir }}/gitlab.ldif",
+        },
+    }
+    configuration["openldap_config_samba"] = {
+        "enabled": True,
+        "domain": {
+            "enabled": samba_domain_enabled,
+            "name": "",
+            "sid": "",
+            "next_rid": 1000,
+            "bootstrap_file": "{{ openldap_config_dir }}/samba-domain.ldif",
+            **samba_domain,
+        },
     }
     INVENTORY_VARIABLES_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     write_file_atomically(

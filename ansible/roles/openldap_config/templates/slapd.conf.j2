@@ -2,7 +2,7 @@ include         /etc/ldap/schema/core.schema
 include         /etc/ldap/schema/cosine.schema
 include         /etc/ldap/schema/nis.schema
 include         /etc/ldap/schema/inetorgperson.schema
-{% set custom_schemas = openldap_config_schemas + (openldap_config_samba_schema if openldap_config_samba_enabled | bool else []) %}
+{% set custom_schemas = openldap_config_schemas + (openldap_config_samba_schema if openldap_config_samba.enabled | bool else []) %}
 {% for schema in custom_schemas %}
 include         /etc/ldap/custom-schema/{{ schema.filename }}
 {% endfor %}
@@ -32,7 +32,7 @@ memberof-refint TRUE
 {% for index in openldap_config_indexes %}
 index           {{ index }}
 {% endfor %}
-{% if openldap_config_samba_enabled | bool %}
+{% if openldap_config_samba.enabled | bool %}
 {% for index in openldap_config_samba_indexes %}
 index           {{ index }}
 {% endfor %}

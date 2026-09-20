@@ -1,0 +1,8 @@
+{% if openldap_config_samba.domain.enabled | bool %}
+dn: sambaDomainName={{ openldap_config_samba.domain.name }},ou=Samba,{{ openldap_config_base_dn }}
+objectClass: top
+objectClass: sambaDomain
+sambaDomainName: {{ openldap_config_samba.domain.name }}
+sambaSID: {{ openldap_config_samba.domain.sid }}
+sambaNextRid: {{ openldap_config_samba.domain.next_rid }}
+{% endif %}

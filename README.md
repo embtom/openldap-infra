@@ -63,8 +63,9 @@ enable it, or set these inventory variables explicitly before initializing a
 new directory:
 
 ```yaml
-openldap_config_gitlab_enabled: true
-openldap_config_gitlab_memberof_enabled: true
+openldap_config_gitlab:
+  enabled: true
+  memberof_enabled: true
 ```
 
 The GitLab bind password is stored in the local Ansible Vault as
@@ -105,6 +106,14 @@ GitLab bootstrap LDIF is imported only when OpenLDAP creates an empty database.
 Enabling these values does not alter an existing directory. For an existing
 database, create the bind account and group separately, add authorized members,
 then enable the `memberof` overlay before deploying GitLab.
+
+## Samba Domain
+
+Samba schema support is enabled by default, but a Samba domain is optional. The
+configuration task can bootstrap one for a new database. Provide the domain name
+and the domain SID reported by the Samba server with `net getdomainsid`; LAM
+then uses the `sambaDomain` entry to create Samba users and groups. Enabling
+this feature does not modify an existing database.
 
 ## Test LDAP
 
@@ -258,7 +267,11 @@ are defaults. Do not store passwords in version control.
 | `openldap_config_organization` | `embtom` | Organization attribute on the root directory entry. |
 | `openldap_config_admin_password` | required | Password for `cn=admin,<base DN>`; generated in the local Vault. |
 | `openldap_config_tls_enabled` | `true` | Enables LDAPS listener and TLS configuration. |
-| `openldap_config_samba_enabled` | `true` | Includes the Samba schema and Samba-specific indexes. |
+| `openldap_config_samba.enabled` | `true` | Includes the Samba schema and Samba-specific indexes. |
+| `openldap_config_samba.domain.enabled` | `false` | Creates a `sambaDomain` entry in a new database. Requires a domain name and the Samba server's domain SID. |
+| `openldap_config_samba.domain.name` | required when enabled | Samba domain name, for example `EMBTOM`. |
+| `openldap_config_samba.domain.sid` | required when enabled | Domain SID reported by `net getdomainsid`. |
+| `openldap_config_samba.domain.next_rid` | `1000` | First RID allocated by the Samba domain. |
 | `openldap_config_gitlab.enabled` | `false` | Adds GitLab bootstrap entries on a new database; requires `memberof_enabled` and a bind password. |
 | `openldap_config_gitlab.memberof_enabled` | `false` | Enables the `memberof` overlay, which derives each entry's `memberOf` attribute from group membership. |
 | `openldap_config_gitlab.bind_cn` | `gitlab-bind` | CN of the GitLab read-only LDAP bind account. |

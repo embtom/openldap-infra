@@ -21,7 +21,7 @@
       - item.content is defined or item.source is defined
     fail_msg: Schema filenames must end in .schema and have content or source.
   loop: "{{ openldap_config_samba_schema }}"
-  when: openldap_config_samba_enabled | bool
+  when: openldap_config_samba.enabled | bool
 
 - name: Create OpenLDAP schema directory
   become: true
@@ -54,4 +54,4 @@
   loop: "{{ openldap_config_samba_schema + openldap_config_schemas }}"
   when: >-
     item.source is defined and
-    (item in openldap_config_schemas or openldap_config_samba_enabled | bool)
+    (item in openldap_config_schemas or openldap_config_samba.enabled | bool)
