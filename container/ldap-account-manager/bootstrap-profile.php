@@ -42,6 +42,10 @@ foreach ([
     $moduleSettings[$setting] = ['false'];
 }
 $moduleSettings['sambaSamAccount_lmHash'] = ['yes'];
+$moduleSettings['posixAccount_user_minUID'] = ['10000'];
+$moduleSettings['posixAccount_user_maxUID'] = ['60000'];
+$moduleSettings['posixGroup_group_minGID'] = ['10000'];
+$moduleSettings['posixGroup_group_maxGID'] = ['60000'];
 $profile->set_moduleSettings($moduleSettings);
 
 $profileManager->saveProfile($profile, $profileName);
