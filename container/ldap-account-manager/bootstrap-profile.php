@@ -47,6 +47,13 @@ $moduleSettings['posixAccount_user_minUID'] = ['10000'];
 $moduleSettings['posixAccount_user_maxUID'] = ['60000'];
 $moduleSettings['posixGroup_group_minGID'] = ['10000'];
 $moduleSettings['posixGroup_group_maxGID'] = ['60000'];
+$moduleSettings['posixAccount_shells'] = [
+    '/bin/bash',
+    '/bin/sh',
+    '/usr/bin/fish',
+    '/usr/bin/zsh',
+    '/usr/sbin/nologin',
+];
 $profile->set_moduleSettings($moduleSettings);
 
 $profileManager->saveProfile($profile, $profileName);
