@@ -24,7 +24,7 @@ $profile->setServerDisplayName('OpenLDAP');
 
 $typeSettings = $profile->get_typeSettings();
 $typeSettings['modules_user'] = 'inetOrgPerson,posixAccount,shadowAccount,sambaSamAccount';
-$typeSettings['modules_group'] = 'posixGroup,sambaGroupMapping';
+$typeSettings['modules_group'] = 'posixGroup,sambaGroupMapping,groupOfNames';
 $profile->set_typeSettings($typeSettings);
 
 $moduleSettings = $profile->get_moduleSettings();
