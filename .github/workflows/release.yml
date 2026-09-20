@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Prepare build environment
+        uses: ./.github/actions/setup-podman
+
+      - name: Get release version
+        id: version
+        uses: ./.github/actions/get-version
+
+      - name: Check tag does not exist
+        run: |
+          version="${{ steps.version.outputs.release_version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${version}"; then
+            echo "Tag ${version} already exists; refusing to release it twice."
+            exit 1
+          fi
+
+      - name: Log in to ghcr.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote images to release tag
+        run: |
+          version="${{ steps.version.outputs.release_version }}"
+          for image in openldap ldap-account-manager; do
+            source="ghcr.io/${{ github.repository }}/${image}:latest"
+            target="ghcr.io/${{ github.repository }}/${image}:${version}"
+            podman pull "${source}"
+            podman tag "${source}" "${target}"
+            podman push "${target}"
+          done
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.release_version }}
+          name: Release ${{ steps.version.outputs.release_version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
