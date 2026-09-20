@@ -13,7 +13,8 @@ openldap_service_build_context: .
 openldap_service_build_extra_args: ""
 openldap_service_force_rebuild: false
 openldap_service_data_dir: /var/lib/openldap/data
-openldap_service_schema_dir: /var/lib/openldap/schema
+openldap_service_data_recreate: false
+openldap_service_full_recreate: false
 openldap_service_unprivileged_port_start: 389
 openldap_service_ldap_port: 389
 openldap_service_ldaps_port: 636

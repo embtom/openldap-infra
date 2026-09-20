@@ -1,0 +1,88 @@
+---
+- name: Validate OpenLDAP configuration settings
+  ansible.builtin.assert:
+    that:
+      - openldap_config_admin_password is defined
+      - openldap_config_admin_password | length > 0
+      - openldap_config_dir is match('^/.+')
+      - openldap_config_dir != '/'
+      - openldap_config_organizational_units | length > 0
+      - openldap_config_indexes | length > 0
+      - >-
+        not openldap_config_gitlab.enabled | bool or
+        openldap_config_gitlab.memberof_enabled | bool
+      - >-
+        not openldap_config_gitlab.enabled | bool or
+        openldap_config_gitlab.bind_password | length > 0
+      - >-
+        not openldap_config_samba.domain.enabled | bool or
+        openldap_config_samba.enabled | bool
+      - >-
+        not openldap_config_samba.domain.enabled | bool or
+        openldap_config_samba.domain.name is
+        match('^[A-Za-z0-9][A-Za-z0-9_-]*$')
+      - >-
+        not openldap_config_samba.domain.enabled | bool or
+        openldap_config_samba.domain.sid is
+        match('^S-1-5-21-[0-9]+-[0-9]+-[0-9]+$')
+      - openldap_config_samba.domain.next_rid | int > 0
+    fail_msg: >-
+      Set a non-empty administrator password, a non-root absolute configuration
+      directory, at least one organizational unit and index, a GitLab bind
+      password when enabling GitLab LDAP integration, and a valid Samba domain
+      name and SID when enabling Samba domain bootstrap.
+
+- name: Create OpenLDAP service user
+  become: true
+  ansible.builtin.user:
+    name: "{{ openldap_config_user }}"
+    comment: OpenLDAP service user
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Get OpenLDAP service user details for full recreation
+  become: true
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ openldap_config_user }}"
+  register: openldap_config_user_info
+  when: openldap_service_full_recreate | bool
+
+- name: Set OpenLDAP service user UID for full recreation
+  ansible.builtin.set_fact:
+    openldap_config_user_uid: >-
+      {{ openldap_config_user_info.ansible_facts.getent_passwd
+         [openldap_config_user][1] }}
+  when: openldap_service_full_recreate | bool
+
+- name: Stop OpenLDAP service before full recreation
+  become: true
+  become_user: "{{ openldap_config_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openldap_config_user_uid }}"
+  ansible.builtin.systemd:
+    name: "{{ openldap_config_service_name }}.service"
+    scope: user
+    state: stopped
+  when: openldap_service_full_recreate | bool
+
+- name: Remove OpenLDAP data and generated configuration for full recreation
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ openldap_service_data_dir }}"
+    - "{{ openldap_config_dir }}"
+    - "{{ openldap_config_schema_dir }}"
+  when: openldap_service_full_recreate | bool
+
+- name: Create OpenLDAP configuration directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ openldap_config_dir }}"
+    state: directory
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0750"

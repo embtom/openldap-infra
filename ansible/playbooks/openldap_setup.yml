@@ -33,8 +33,6 @@
       tags: [pki, service, ldap-account-manager]
     - role: openldap_config
       tags: [config]
-    - role: openldap_schema
-      tags: [schema]
     - role: openldap_service
       tags: [service]
     - role: ldap_account_manager

@@ -2,7 +2,7 @@ include         /etc/ldap/schema/core.schema
 include         /etc/ldap/schema/cosine.schema
 include         /etc/ldap/schema/nis.schema
 include         /etc/ldap/schema/inetorgperson.schema
-{% set custom_schemas = openldap_config_schemas + (openldap_config_samba_schema if openldap_config_samba_enabled | bool else []) %}
+{% set custom_schemas = openldap_config_schemas + (openldap_config_samba_schema if openldap_config_samba.enabled | bool else []) %}
 {% for schema in custom_schemas %}
 include         /etc/ldap/custom-schema/{{ schema.filename }}
 {% endfor %}
@@ -10,6 +10,9 @@ pidfile         /run/slapd/slapd.pid
 argsfile        /run/slapd/slapd.args
 modulepath      /usr/lib/ldap
 moduleload      back_mdb
+{% if openldap_config_gitlab.memberof_enabled | bool %}
+moduleload      memberof
+{% endif %}
 {% if openldap_config_tls_enabled | bool %}
 TLSCertificateFile /tls/{{ openldap_service_tls_certificate_name }}-fullchain.crt
 TLSCertificateKeyFile /tls/{{ openldap_service_tls_certificate_name }}.key
@@ -20,10 +23,16 @@ suffix          "{{ openldap_config_base_dn }}"
 rootdn          "cn=admin,{{ openldap_config_base_dn }}"
 rootpw          {CRYPT}{{ openldap_config_admin_password | password_hash('sha512') }}
 directory       /var/lib/ldap
+{% if openldap_config_gitlab.memberof_enabled | bool %}
+overlay         memberof
+memberof-group-oc groupOfNames
+memberof-member-ad member
+memberof-refint TRUE
+{% endif %}
 {% for index in openldap_config_indexes %}
 index           {{ index }}
 {% endfor %}
-{% if openldap_config_samba_enabled | bool %}
+{% if openldap_config_samba.enabled | bool %}
 {% for index in openldap_config_samba_indexes %}
 index           {{ index }}
 {% endfor %}

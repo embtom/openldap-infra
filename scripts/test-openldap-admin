@@ -4,7 +4,7 @@ set -euo pipefail
 LDAP_HOST="$(hostname --fqdn 2>/dev/null || hostname)"
 LDAP_PROTOCOL="ldaps"
 LDAP_PORT=""
-LDAP_BASE_DN="dc=example,dc=org"
+LDAP_BASE_DN="dc=embtom,dc=org"
 LDAP_CA_CERT="${HOME}/.local/share/embtom/pki/certs/root-ca.crt"
 
 usage() {

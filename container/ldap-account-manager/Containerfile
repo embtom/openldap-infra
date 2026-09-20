@@ -14,6 +14,7 @@ RUN apt-get update \
 
 COPY container/ldap-account-manager/entrypoint.sh /usr/local/bin/ldap-account-manager-entrypoint
 COPY container/ldap-account-manager/bootstrap-profile.php /usr/local/bin/ldap-account-manager-bootstrap-profile
+COPY container/ldap-account-manager/groupOfNames.inc /usr/share/ldap-account-manager/lib/modules/groupOfNames.inc
 COPY container/ldap-account-manager/nginx.conf /etc/nginx/sites-available/default
 
 # Configure the container entrypoints and use the supplied Nginx virtual host.

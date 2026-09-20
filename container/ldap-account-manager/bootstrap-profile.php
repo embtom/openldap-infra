@@ -19,12 +19,13 @@ $profile->set_ServerURL($serverUrl);
 $profile->setUseTLS('no');
 $profile->set_Suffix('user', 'ou=People,' . $baseDn);
 $profile->set_Suffix('group', 'ou=Groups,' . $baseDn);
+$profile->set_Suffix('smbDomain', 'ou=Samba,' . $baseDn);
 $profile->set_Adminstring('cn=admin,' . $baseDn);
 $profile->setServerDisplayName('OpenLDAP');
 
 $typeSettings = $profile->get_typeSettings();
 $typeSettings['modules_user'] = 'inetOrgPerson,posixAccount,shadowAccount,sambaSamAccount';
-$typeSettings['modules_group'] = 'posixGroup,sambaGroupMapping';
+$typeSettings['modules_group'] = 'posixGroup,sambaGroupMapping,groupOfNames';
 $profile->set_typeSettings($typeSettings);
 
 $moduleSettings = $profile->get_moduleSettings();
@@ -42,6 +43,10 @@ foreach ([
     $moduleSettings[$setting] = ['false'];
 }
 $moduleSettings['sambaSamAccount_lmHash'] = ['yes'];
+$moduleSettings['posixAccount_user_minUID'] = ['10000'];
+$moduleSettings['posixAccount_user_maxUID'] = ['60000'];
+$moduleSettings['posixGroup_group_minGID'] = ['10000'];
+$moduleSettings['posixGroup_group_maxGID'] = ['60000'];
 $profile->set_moduleSettings($moduleSettings);
 
 $profileManager->saveProfile($profile, $profileName);

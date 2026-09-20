@@ -1,0 +1,57 @@
+---
+- name: Validate OpenLDAP schema directory
+  ansible.builtin.assert:
+    that:
+      - openldap_config_schema_dir is match('^/.+')
+      - openldap_config_schema_dir != '/'
+    fail_msg: Set a non-root absolute openldap_config_schema_dir.
+
+- name: Validate OpenLDAP custom schemas
+  ansible.builtin.assert:
+    that:
+      - item.filename is match('^[A-Za-z0-9][A-Za-z0-9_.-]*[.]schema$')
+      - item.content is defined or item.source is defined
+    fail_msg: Schema filenames must end in .schema and have content or source.
+  loop: "{{ openldap_config_schemas }}"
+
+- name: Validate OpenLDAP Samba schemas
+  ansible.builtin.assert:
+    that:
+      - item.filename is match('^[A-Za-z0-9][A-Za-z0-9_.-]*[.]schema$')
+      - item.content is defined or item.source is defined
+    fail_msg: Schema filenames must end in .schema and have content or source.
+  loop: "{{ openldap_config_samba_schema }}"
+  when: openldap_config_samba.enabled | bool
+
+- name: Create OpenLDAP schema directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ openldap_config_schema_dir }}"
+    state: directory
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0750"
+
+- name: Deploy OpenLDAP custom schemas
+  become: true
+  ansible.builtin.copy:
+    content: "{{ item.content | default(omit) }}"
+    dest: "{{ openldap_config_schema_dir }}/{{ item.filename }}"
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0644"
+  loop: "{{ openldap_config_schemas }}"
+  when: item.content is defined
+
+- name: Deploy OpenLDAP schema files from role files
+  become: true
+  ansible.builtin.copy:
+    src: "{{ item.source }}"
+    dest: "{{ openldap_config_schema_dir }}/{{ item.filename }}"
+    owner: "{{ openldap_config_user }}"
+    group: "{{ openldap_config_user }}"
+    mode: "0644"
+  loop: "{{ openldap_config_samba_schema + openldap_config_schemas }}"
+  when: >-
+    item.source is defined and
+    (item in openldap_config_schemas or openldap_config_samba.enabled | bool)
