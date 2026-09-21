@@ -4,6 +4,7 @@ This repository builds an OpenLDAP container on Debian Trixie and deploys it as
 a rootless Podman Quadlet managed by a systemd user service.
 
 [![CI](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml/badge.svg)](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/embtom/openldap-infra)](https://github.com/embtom/openldap-infra/releases)
 
 ## VS Code Tasks
 
