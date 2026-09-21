@@ -36,9 +36,9 @@ openldap_service_container_method: image-pull
 ldap_account_manager_container_method: image-pull
 ```
 
-The roles use `ghcr.io/embtom/openldap-infra/openldap:latest` and
-`ghcr.io/embtom/openldap-infra/ldap-account-manager:latest` by default.
-Override either role's `*_image_pull_image` value to use another registry image.
+Deployments use `latest` by default. From a Git release tag, `scripts/deploy`
+automatically uses the matching image tag; set `openldap_infra_image_tag` in
+inventory to pin another version.
 
 To build from the local checkout instead, set either role's
 `*_container_method` to `direct-build`. The image is then built on the Ansible
@@ -296,7 +296,7 @@ are defaults. Do not store passwords in version control.
 | `openldap_service_name` | `openldap_config_service_name` | Quadlet and container name. |
 | `openldap_service_container_method` | `image-pull` | Image source: `image-pull` downloads from a registry; `direct-build` builds and transfers locally. |
 | `openldap_service_direct_build_image` | `localhost/openldap:trixie` | Image tag used by `direct-build`. |
-| `openldap_service_image_pull_image` | `ghcr.io/embtom/openldap-infra/openldap:latest` | Registry image used by `image-pull`. |
+| `openldap_service_image_pull_image` | `ghcr.io/embtom/openldap-infra/openldap:<tag>` | Registry image used by `image-pull`; `<tag>` defaults to `latest` or the exact Git release tag. |
 | `openldap_service_image` | selected by method | Effective image name; normally do not override it. |
 | `openldap_service_containerfile` | `container/openldap/Containerfile` | Containerfile used for local builds. |
 | `openldap_service_build_context` | `.` | Build context used for local builds. |
@@ -323,7 +323,7 @@ are defaults. Do not store passwords in version control.
 | `ldap_account_manager_service_name` | `lam` | Quadlet and container name. |
 | `ldap_account_manager_container_method` | `image-pull` | Image source: `image-pull` or `direct-build`. |
 | `ldap_account_manager_direct_build_image` | `localhost/ldap-account-manager:trixie` | Image tag used by `direct-build`. |
-| `ldap_account_manager_image_pull_image` | `ghcr.io/embtom/openldap-infra/ldap-account-manager:latest` | Registry image used by `image-pull`. |
+| `ldap_account_manager_image_pull_image` | `ghcr.io/embtom/openldap-infra/ldap-account-manager:<tag>` | Registry image used by `image-pull`; `<tag>` defaults to `latest` or the exact Git release tag. |
 | `ldap_account_manager_image` | selected by method | Effective image name; normally do not override it. |
 | `ldap_account_manager_containerfile` | `container/ldap-account-manager/Containerfile` | Containerfile used for local builds. |
 | `ldap_account_manager_build_context` | `.` | Build context used for local builds. |

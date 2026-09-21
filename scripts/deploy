@@ -76,12 +76,25 @@ if [[ ! -f "${VAULT_FILE}" ]]; then
 fi
 
 EXTRA_VARS=()
+IMAGE_TAG="$(
+  git -C "${REPOSITORY_DIR}" tag --points-at HEAD --sort=-version:refname |
+    grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' |
+    head -n 1 ||
+    true
+)"
+if [[ -n "${IMAGE_TAG}" ]]; then
+  EXTRA_VARS+=(--extra-vars "openldap_infra_image_tag=${IMAGE_TAG}")
+else
+  IMAGE_TAG=latest
+fi
 if [[ "${RECREATE_DATA}" == true ]]; then
   EXTRA_VARS+=(--extra-vars "openldap_service_data_recreate=true")
 fi
 if [[ "${RECREATE_ALL}" == true ]]; then
   EXTRA_VARS+=(--extra-vars "openldap_service_full_recreate=true")
 fi
+
+echo "Deploying container image tag: ${IMAGE_TAG}"
 
 (
   cd "${SCRIPT_DIR}/../ansible"
