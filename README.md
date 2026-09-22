@@ -1,10 +1,107 @@
 # OpenLDAP Infrastructure
 
-This repository builds an OpenLDAP container on Debian Trixie and deploys it as
-a rootless Podman Quadlet managed by a systemd user service.
+**Reproducible OpenLDAP infrastructure with Ansible, rootless Podman and systemd.**
+
+Deploy a complete LDAP identity service on Debian Trixie with TLS, custom
+schemas, LDAP Account Manager, GitLab LDAP integration and optional Samba
+support, without a rootful container runtime.
 
 [![CI](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml/badge.svg)](https://github.com/embtom/openldap-infra/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/embtom/openldap-infra)](https://github.com/embtom/openldap-infra/releases)
+
+## Architecture
+
+```mermaid
+flowchart TD
+   ansible[Ansible] --> pki[PKI]
+   ansible --> configuration[Configuration]
+   pki --> quadlet[Quadlet]
+   configuration --> quadlet
+   quadlet --> systemd[systemd]
+   systemd --> podman[rootless Podman]
+   podman --> openldap[OpenLDAP]
+   openldap --> gitlab[GitLab]
+   openldap --> samba[Samba]
+   openldap --> linux[Linux/SSSD]
+   lam[LDAP Account Manager] --> openldap[OpenLDAP]
+```
+
+The infrastructure is intentionally built from standard Linux components:
+
+- **Ansible** manages configuration and deployment.
+- **Podman** provides rootless containers.
+- **Quadlet** integrates containers with systemd.
+- **OpenLDAP** provides the directory service.
+- **PKI** provides trusted TLS certificates.
+- **LDAP Account Manager** provides a web administration interface.
+- **GitLab LDAP integration** provides group-based GitLab access control.
+- **Samba schema support** allows the directory to be used as part of a Samba environment.
+- **Custom schemas** can be deployed without modifying the container image.
+- **Ansible Vault** protects deployment credentials and LDAP passwords.
+
+## What You Get
+
+- TLS-enabled OpenLDAP
+- Rootless Podman containers
+- Ansible-based deployment
+- systemd/Quadlet service management
+- LDAP Account Manager
+- GitLab LDAP authentication and group-based access control
+- Linux/SSSD schema support
+- Optional Samba schema and domain bootstrap
+- Integrated local PKI
+- LDAP and schema integration tests
+- Published GHCR images
+- Optional local container builds
+- Ansible Vault support for credentials
+
+## Quick Start
+
+Install the required Python and Ansible dependencies:
+
+```sh
+scripts/install-requirements
+scripts/install-ansible
+```
+
+Create the local configuration and encrypted Vault:
+
+```sh
+python3 scripts/configure-openldap.py
+```
+
+The configuration wizard asks whether GitLab LDAP authentication should be
+enabled and creates the local inventory configuration.
+
+Deploy the complete stack locally:
+
+```sh
+scripts/deploy --host localhost
+```
+
+To deploy to a remote host, replace `localhost` with its SSH name or address:
+
+```sh
+scripts/deploy --host ldap.example.org
+```
+
+Verify the LDAP service, administrator bind, and active schema:
+
+```sh
+./scripts/test-openldap
+./scripts/test-openldap-admin
+./scripts/test-openldap-schema
+```
+
+When GitLab LDAP is enabled, also run:
+
+```sh
+./scripts/test-gitlab-ldap
+```
+
+LDAP Account Manager is available at `https://localhost:8443/` by default.
+The exact host, port, and CA certificate can be changed through the Ansible
+inventory.
 
 ## VS Code Tasks
 
@@ -29,6 +126,8 @@ and passwords to the encrypted, Git-ignored
 `ansible/inventories/group_vars/all/vault.yml`. Deployments prompt for the
 Vault and sudo passwords; LDAP passwords are never command-line arguments.
 
+## Container Images
+
 By default, the `openldap_service` and `ldap_account_manager` roles pull their
 published GHCR images. The generated Quadlets use `Pull=always`:
 
@@ -37,14 +136,26 @@ openldap_service_container_method: image-pull
 ldap_account_manager_container_method: image-pull
 ```
 
+### Image Versions
+
 Deployments use `latest` by default. From a Git release tag, `scripts/deploy`
 automatically uses the matching image tag; set `openldap_infra_image_tag` in
-inventory to pin another version.
+inventory to pin another version. Pinned image versions are recommended for
+reproducible deployments.
+
+The published images are:
+
+```text
+ghcr.io/embtom/openldap-infra/openldap:<tag>
+ghcr.io/embtom/openldap-infra/ldap-account-manager:<tag>
+```
 
 To build from the local checkout instead, set either role's
 `*_container_method` to `direct-build`. The image is then built on the Ansible
 controller, transferred into the service user's rootless Podman storage, and
 the Quadlet uses `Pull=never`.
+
+## Data and Lifecycle
 
 OpenLDAP data lives in `/var/lib/openldap/data`; bootstrap entries are imported
 only for a new database. A changed `openldap_config_base_dn` requires an LDAP
@@ -239,7 +350,9 @@ openldap_config_schemas:
         SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
 ```
 
-To publish LDAPS on port 636, enable TLS and set the DNS name clients use to
+## TLS and PKI
+
+To publish LDAPS on port `636`, enable TLS and set the DNS name clients use to
 reach the LDAP server:
 
 ```yaml
@@ -368,3 +481,38 @@ OpenLDAP and LDAP Account Manager run on the private rootless Podman bridge
 network `ldap-services`. LDAP Account Manager can reach the directory through
 the DNS name `openldap` over LDAPS on port `636`; its web interface remains
 available through the configured HTTPS host port (default: `8443`).
+
+## Security Notes
+
+Secrets should never be committed to the repository. The configuration workflow
+stores passwords in the encrypted, Git-ignored Ansible Vault at
+`ansible/inventories/group_vars/all/vault.yml`.
+
+Protect the controller-side PKI directory, `~/.local/share/embtom/pki`, because
+it contains the CA private keys required to issue trusted certificates. For
+production deployments, pin container image versions and back up both LDAP data
+and PKI state.
+
+## Development
+
+Run Ansible linting before deployment:
+
+```sh
+scripts/ansible-lint
+```
+
+Container images can be built directly from the repository using the
+`direct-build` container method. The integration scripts can then be used
+against the resulting deployment:
+
+```sh
+./scripts/test-openldap
+./scripts/test-openldap-admin
+./scripts/test-openldap-schema
+./scripts/test-openldap-enabled-schemas
+./scripts/test-gitlab-ldap
+```
+
+The goal of the project is to keep the complete infrastructure reproducible: a
+fresh host should be able to receive the same configuration, container images,
+TLS trust chain, and LDAP schema from the same Ansible-controlled source.
