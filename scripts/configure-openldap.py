@@ -3,6 +3,7 @@
 
 import getpass
 import json
+import secrets
 import shutil
 import subprocess
 import sys
@@ -22,6 +23,14 @@ CONFIG_FILE = INVENTORY_VARIABLES_DIR / "config.yml"
 VAULT_FILE = INVENTORY_VARIABLES_DIR / "vault.yml"
 
 
+def generate_samba_sid() -> str:
+    """Generates a cryptographically secure, random Samba Domain SID."""
+    sub_authority_1 = secrets.randbits(32)
+    sub_authority_2 = secrets.randbits(32)
+    sub_authority_3 = secrets.randbits(32)
+    return f"S-1-5-21-{sub_authority_1}-{sub_authority_2}-{sub_authority_3}"
+
+
 def read_secret(label: str) -> str:
     password = getpass.getpass(f"{label}: ")
     confirmation = getpass.getpass(f"Confirm {label.lower()}: ")
@@ -36,11 +45,12 @@ def confirm(prompt: str) -> bool:
     return input(f"{prompt} [y/N] ").lower() in {"y", "yes"}
 
 
-def read_samba_domain_setting(label: str) -> str:
-    value = input(f"{label}: ").strip()
-    if not value:
+def read_samba_domain_setting(label: str, default: str = "") -> str:
+    prompt = f"{label} [{default}]: " if default else f"{label}: "
+    value = input(prompt).strip()
+    if not value and not default:
         raise ValueError(f"{label} must not be empty.")
-    return value
+    return value if value else default
 
 
 def write_file_atomically(path: Path, content: str, mode: int) -> None:
@@ -56,12 +66,12 @@ def write_file_atomically(path: Path, content: str, mode: int) -> None:
         temporary_path.unlink(missing_ok=True)
 
 
-def encrypt_vault(secrets: dict[str, str]) -> None:
+def encrypt_vault(secrets_dict: dict[str, str]) -> None:
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", dir=INVENTORY_VARIABLES_DIR, delete=False
     ) as temporary_file:
         temporary_path = Path(temporary_file.name)
-        temporary_file.write(json.dumps(secrets, indent=2))
+        temporary_file.write(json.dumps(secrets_dict, indent=2))
         temporary_file.write("\n")
     encrypted_path = temporary_path.with_name(f"{temporary_path.name}.vault")
 
@@ -97,18 +107,24 @@ def main() -> int:
     gitlab_enabled = confirm("Enable GitLab LDAP authentication?")
     samba_domain_enabled = confirm("Bootstrap a Samba domain for LAM?")
     try:
-        secrets = {
+        secrets_dict = {
             "openldap_config_admin_password": read_secret("LDAP administrator password")
         }
         if gitlab_enabled:
-            secrets["openldap_config_gitlab_bind_password"] = read_secret(
+            secrets_dict["openldap_config_gitlab_bind_password"] = read_secret(
                 "GitLab bind password"
             )
         samba_domain = {}
         if samba_domain_enabled:
+            suggested_sid = generate_samba_sid()
+
             samba_domain = {
-                "name": read_samba_domain_setting("Samba domain name"),
-                "sid": read_samba_domain_setting("Samba domain SID"),
+                "name": read_samba_domain_setting(
+                    "Samba domain name", default="EMBTOM"
+                ),
+                "sid": read_samba_domain_setting(
+                    "Samba domain SID", default=suggested_sid
+                ),
             }
     except ValueError as error:
         print(f"ERROR: {error}", file=sys.stderr)
@@ -139,7 +155,7 @@ def main() -> int:
     write_file_atomically(
         CONFIG_FILE, f"---\n{json.dumps(configuration, indent=2)}\n", 0o600
     )
-    encrypt_vault(secrets)
+    encrypt_vault(secrets_dict)
 
     print(f"Created local OpenLDAP configuration: {CONFIG_FILE}")
     print(f"Created encrypted LDAP secrets vault: {VAULT_FILE}")
