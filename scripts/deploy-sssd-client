@@ -6,6 +6,7 @@ REPOSITORY_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
 
 HOST=""
 VAULT_FILE="${REPOSITORY_DIR}/ansible/inventories/group_vars/all/vault.yml"
+SSSD_CONFIG_FILE="${REPOSITORY_DIR}/ansible/inventories/group_vars/all/sssd-client.yml"
 
 usage() {
   cat <<EOF
@@ -47,6 +48,12 @@ esac
 if [[ ! -f "${VAULT_FILE}" ]]; then
   echo "ERROR: LDAP secrets vault '${VAULT_FILE}' does not exist." >&2
   echo "Run 'python3 ${REPOSITORY_DIR}/scripts/configure-openldap.py' first." >&2
+  exit 1
+fi
+
+if [[ ! -f "${SSSD_CONFIG_FILE}" ]]; then
+  echo "ERROR: SSSD client configuration '${SSSD_CONFIG_FILE}' does not exist." >&2
+  echo "Run 'python3 ${REPOSITORY_DIR}/scripts/configure-sssd-client.py' first." >&2
   exit 1
 fi
 
