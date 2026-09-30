@@ -5,13 +5,13 @@
     state: present
     update_cache: true
 
-- name: Create home directories for SSSD users
+- name: Configure home directory creation for SSSD users
   ansible.builtin.lineinfile:
     path: /etc/pam.d/common-session
     regexp: '^session\s+required\s+pam_mkhomedir\.so\b.*$'
     line: session required pam_mkhomedir.so skel=/etc/skel/ umask=0022
     insertbefore: '^session\s+optional\s+pam_systemd\.so\b.*$'
-  when: sssd_client_mkhomedir_enabled | bool
+    state: "{{ sssd_client_mkhomedir_enabled | bool | ternary('present', 'absent') }}"
 
 - name: Install OpenLDAP root CA certificate
   ansible.builtin.copy:
