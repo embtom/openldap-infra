@@ -1,5 +1,6 @@
 ---
-sssd_client_ldap_uri: ldaps://openldap
+sssd_client_ldap_host: ""
+sssd_client_ldap_uri: "ldaps://{{ sssd_client_ldap_host }}"
 sssd_client_search_base: "{{ openldap_config_base_dn }}"
 sssd_client_bind_dn: >-
   cn={{ openldap_config_services.bind_cn }},ou=Services,

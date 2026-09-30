@@ -1,4 +1,18 @@
 ---
+- name: Ensure the LDAP endpoint is configured
+  ansible.builtin.assert:
+    that:
+      - sssd_client_ldap_uri is defined
+      - sssd_client_ldap_uri != 'ldaps://'
+    fail_msg: >-
+      sssd_client_ldap_uri resolves to
+      "{{ sssd_client_ldap_uri | default('') }}". Set
+      sssd_client_ldap_host to the LDAP server's externally
+      resolvable DNS hostname (it must match the name in the LDAPS
+      certificate), e.g. by running scripts/configure-sssd-client.py,
+      or override sssd_client_ldap_uri directly for advanced setups.
+    quiet: true
+
 - name: Install SSSD packages
   ansible.builtin.apt:
     name: "{{ sssd_client_packages }}"
