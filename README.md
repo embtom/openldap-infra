@@ -71,7 +71,8 @@ python3 scripts/configure-openldap.py
 ```
 
 The configuration wizard asks whether GitLab LDAP authentication should be
-enabled and creates the local inventory configuration.
+enabled, creates a general services bind account, and writes the local
+inventory configuration.
 
 Deploy the complete stack locally:
 
@@ -178,6 +179,7 @@ new directory:
 openldap_config_gitlab:
   enabled: true
   memberof_enabled: true
+  bind_cn: gitlab-bind
 ```
 
 The GitLab bind password is stored in the local Ansible Vault as
@@ -218,6 +220,21 @@ GitLab bootstrap LDIF is imported only when OpenLDAP creates an empty database.
 Enabling these values does not alter an existing directory. For an existing
 database, create the bind account and group separately, add authorized members,
 then enable the `memberof` overlay before deploying GitLab.
+
+## Services LDAP Bind Account
+
+OpenLDAP creates a dedicated, read-only LDAP search account for services such
+as SSSD when it initializes a new directory:
+
+```yaml
+openldap_config_services:
+  bind_cn: services-bind
+```
+
+Store `openldap_config_services_bind_password` in the local Ansible Vault.
+This creates `cn=services-bind,ou=Services,<base DN>`, which can be configured
+as SSSD's `ldap_default_bind_dn` or used by another service. As with the other
+bootstrap data, this account is not added to an existing database.
 
 ## Samba Domain
 
