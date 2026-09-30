@@ -114,6 +114,9 @@ def main() -> int:
             secrets_dict["openldap_config_gitlab_bind_password"] = read_secret(
                 "GitLab bind password"
             )
+        secrets_dict["openldap_config_services_bind_password"] = read_secret(
+            "Services bind password"
+        )
         samba_domain = {}
         if samba_domain_enabled:
             suggested_sid = generate_samba_sid()
@@ -138,6 +141,12 @@ def main() -> int:
             "bind_password": "{{ openldap_config_gitlab_bind_password | default('') }}",
             "access_group": "gitlab-users",
             "bootstrap_file": "{{ openldap_config_dir }}/gitlab.ldif",
+        },
+        "openldap_config_services": {
+            "enabled": True,
+            "bind_cn": "services-bind",
+            "bind_password": "{{ openldap_config_services_bind_password | default('') }}",
+            "bootstrap_file": "{{ openldap_config_dir }}/services.ldif",
         },
     }
     configuration["openldap_config_samba"] = {
