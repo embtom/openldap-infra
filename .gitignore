@@ -21,6 +21,7 @@ venv/
 *.vault-pass
 ansible/inventories/group_vars/all/config.yml
 ansible/inventories/group_vars/all/vault.yml
+ansible/inventories/group_vars/all/sssd-client.yml
 
 # Logs and temporary files
 *.log
