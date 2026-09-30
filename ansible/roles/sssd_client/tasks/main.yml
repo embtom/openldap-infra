@@ -1,0 +1,39 @@
+---
+- name: Install SSSD packages
+  ansible.builtin.apt:
+    name: "{{ sssd_client_packages }}"
+    state: present
+    update_cache: true
+
+- name: Create home directories for SSSD users
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session
+    regexp: '^session\s+required\s+pam_mkhomedir\.so\b.*$'
+    line: session required pam_mkhomedir.so skel=/etc/skel/ umask=0022
+    insertbefore: '^session\s+optional\s+pam_systemd\.so\b.*$'
+  when: sssd_client_mkhomedir_enabled | bool
+
+- name: Install OpenLDAP root CA certificate
+  ansible.builtin.copy:
+    src: "{{ pki_root_ca_certificate }}"
+    dest: "{{ sssd_client_ca_certificate }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update CA certificates
+
+- name: Deploy SSSD configuration
+  ansible.builtin.template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart SSSD
+
+- name: Enable and start SSSD
+  ansible.builtin.systemd_service:
+    name: sssd
+    enabled: true
+    state: started
