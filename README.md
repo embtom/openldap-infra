@@ -71,7 +71,8 @@ python3 scripts/configure-openldap.py
 ```
 
 The configuration wizard asks whether GitLab LDAP authentication should be
-enabled and creates the local inventory configuration.
+enabled, creates a general services bind account, and writes the local
+inventory configuration.
 
 Deploy the complete stack locally:
 
@@ -186,11 +187,11 @@ The GitLab bind password is stored in the local Ansible Vault as
 This creates the following entries under the configured base DN:
 
 ```text
-cn=gitlab-bind,ou=Services,<base DN>
+cn=service-bind,ou=Services,<base DN>
 cn=gitlab-users,ou=Groups,<base DN>
 ```
 
-`gitlab-bind` is the read-only account GitLab uses for LDAP searches. Keep its
+`service-bind` is the read-only account GitLab uses for LDAP searches. Keep its
 password in Ansible Vault or another secret source. `gitlab-users` is the
 access group; add each permitted person as a `member`, for example:
 
@@ -218,6 +219,21 @@ GitLab bootstrap LDIF is imported only when OpenLDAP creates an empty database.
 Enabling these values does not alter an existing directory. For an existing
 database, create the bind account and group separately, add authorized members,
 then enable the `memberof` overlay before deploying GitLab.
+
+## Services LDAP Bind Account
+
+OpenLDAP creates a dedicated, read-only LDAP search account for services such
+as SSSD when it initializes a new directory:
+
+```yaml
+openldap_config_services:
+  bind_cn: services-bind
+```
+
+Store `openldap_config_services_bind_password` in the local Ansible Vault.
+This creates `cn=services-bind,ou=Services,<base DN>`, which can be configured
+as SSSD's `ldap_default_bind_dn` or used by another service. As with the other
+bootstrap data, this account is not added to an existing database.
 
 ## Samba Domain
 
@@ -388,7 +404,7 @@ are defaults. Do not store passwords in version control.
 | `openldap_config_samba.domain.next_rid` | `1000` | First RID allocated by the Samba domain. |
 | `openldap_config_gitlab.enabled` | `false` | Adds GitLab bootstrap entries on a new database; requires `memberof_enabled` and a bind password. |
 | `openldap_config_gitlab.memberof_enabled` | `false` | Enables the `memberof` overlay, which derives each entry's `memberOf` attribute from group membership. |
-| `openldap_config_gitlab.bind_cn` | `gitlab-bind` | CN of the GitLab read-only LDAP bind account. |
+| `openldap_config_gitlab.bind_cn` | `service-bind` | CN of the GitLab read-only LDAP bind account. |
 | `openldap_config_gitlab.bind_password` | required | Password for the GitLab bind account; generated in the local Vault. |
 | `openldap_config_gitlab.access_group` | `gitlab-users` | `groupOfNames` group used to allow GitLab sign-in. |
 | `openldap_config_schemas` | `[]` | Extra schemas, each with `filename` and inline `content`. |
