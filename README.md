@@ -92,6 +92,7 @@ Verify the LDAP service, administrator bind, and active schema:
 ./scripts/test-openldap
 ./scripts/test-openldap-admin
 ./scripts/test-openldap-schema
+./scripts/test-services-ldap
 ```
 
 When GitLab LDAP is enabled, also run:
