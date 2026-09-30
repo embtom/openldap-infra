@@ -180,6 +180,7 @@ new directory:
 openldap_config_gitlab:
   enabled: true
   memberof_enabled: true
+  bind_cn: gitlab-bind
 ```
 
 The GitLab bind password is stored in the local Ansible Vault as
@@ -188,11 +189,11 @@ The GitLab bind password is stored in the local Ansible Vault as
 This creates the following entries under the configured base DN:
 
 ```text
-cn=service-bind,ou=Services,<base DN>
+cn=gitlab-bind,ou=Services,<base DN>
 cn=gitlab-users,ou=Groups,<base DN>
 ```
 
-`service-bind` is the read-only account GitLab uses for LDAP searches. Keep its
+`gitlab-bind` is the read-only account GitLab uses for LDAP searches. Keep its
 password in Ansible Vault or another secret source. `gitlab-users` is the
 access group; add each permitted person as a `member`, for example:
 
@@ -405,7 +406,7 @@ are defaults. Do not store passwords in version control.
 | `openldap_config_samba.domain.next_rid` | `1000` | First RID allocated by the Samba domain. |
 | `openldap_config_gitlab.enabled` | `false` | Adds GitLab bootstrap entries on a new database; requires `memberof_enabled` and a bind password. |
 | `openldap_config_gitlab.memberof_enabled` | `false` | Enables the `memberof` overlay, which derives each entry's `memberOf` attribute from group membership. |
-| `openldap_config_gitlab.bind_cn` | `service-bind` | CN of the GitLab read-only LDAP bind account. |
+| `openldap_config_gitlab.bind_cn` | `gitlab-bind` | CN of the GitLab read-only LDAP bind account. |
 | `openldap_config_gitlab.bind_password` | required | Password for the GitLab bind account; generated in the local Vault. |
 | `openldap_config_gitlab.access_group` | `gitlab-users` | `groupOfNames` group used to allow GitLab sign-in. |
 | `openldap_config_schemas` | `[]` | Extra schemas, each with `filename` and inline `content`. |
