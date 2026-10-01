@@ -25,7 +25,9 @@
     regexp: '^session\s+required\s+pam_mkhomedir\.so\b.*$'
     line: session required pam_mkhomedir.so skel=/etc/skel/ umask=0022
     insertbefore: '^session\s+optional\s+pam_systemd\.so\b.*$'
-    state: "{{ sssd_client_mkhomedir_enabled | bool | ternary('present', 'absent') }}"
+    state: >-
+      {{ sssd_client_mkhomedir_enabled | bool |
+         ternary('present', 'absent') }}
 
 - name: Install OpenLDAP root CA certificate
   ansible.builtin.copy:
