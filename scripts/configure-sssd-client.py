@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Interactively configure the SSSD client LDAP endpoint."""
 
+import getpass
 import json
 import subprocess
 import sys
@@ -33,6 +34,11 @@ def read_ldap_host() -> str:
     return value
 
 
+def read_setting(label: str, default: str) -> str:
+    value = input(f"{label} [{default}]: ").strip()
+    return value or default
+
+
 def write_file_atomically(path: Path, content: str, mode: int) -> None:
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", dir=path.parent, delete=False
@@ -62,11 +68,23 @@ def main() -> int:
     )
     try:
         ldap_host = read_ldap_host()
+        search_base = read_setting("LDAP search base", "dc=embtom,dc=org")
+        bind_dn = read_setting(
+            "LDAP bind DN", f"cn=services-bind,ou=Services,{search_base}"
+        )
+        bind_password = getpass.getpass("LDAP bind password: ")
+        if not bind_password:
+            raise ValueError("LDAP bind password must not be empty.")
     except ValueError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1
 
-    configuration = {"sssd_client_ldap_host": ldap_host}
+    configuration = {
+        "sssd_client_ldap_host": ldap_host,
+        "sssd_client_search_base": search_base,
+        "sssd_client_bind_dn": bind_dn,
+        "sssd_client_bind_password": bind_password,
+    }
     INVENTORY_VARIABLES_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     write_file_atomically(
         CONFIG_FILE, f"---\n{json.dumps(configuration, indent=2)}\n", 0o600
