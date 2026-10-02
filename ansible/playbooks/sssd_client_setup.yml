@@ -1,0 +1,6 @@
+---
+- name: Set up SSSD LDAP client
+  hosts: all
+  become: true
+  roles:
+    - role: sssd_client

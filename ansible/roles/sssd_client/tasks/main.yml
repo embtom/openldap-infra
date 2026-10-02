@@ -1,0 +1,55 @@
+---
+- name: Ensure the LDAP endpoint is configured
+  ansible.builtin.assert:
+    that:
+      - sssd_client_ldap_uri is defined
+      - sssd_client_ldap_uri != 'ldaps://'
+    fail_msg: >-
+      sssd_client_ldap_uri resolves to
+      "{{ sssd_client_ldap_uri | default('') }}". Set
+      sssd_client_ldap_host to the LDAP server's externally
+      resolvable DNS hostname (it must match the name in the LDAPS
+      certificate), e.g. by running scripts/configure-sssd-client.py,
+      or override sssd_client_ldap_uri directly for advanced setups.
+    quiet: true
+
+- name: Install SSSD packages
+  ansible.builtin.apt:
+    name: "{{ sssd_client_packages }}"
+    state: present
+    update_cache: true
+
+- name: Configure home directory creation for SSSD users
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session
+    regexp: '^session\s+required\s+pam_mkhomedir\.so\b.*$'
+    line: session required pam_mkhomedir.so skel=/etc/skel/ umask=0022
+    insertbefore: '^session\s+optional\s+pam_systemd\.so\b.*$'
+    state: >-
+      {{ sssd_client_mkhomedir_enabled | bool |
+         ternary('present', 'absent') }}
+
+- name: Install OpenLDAP root CA certificate
+  ansible.builtin.copy:
+    src: "{{ pki_root_ca_certificate }}"
+    dest: "{{ sssd_client_ca_certificate }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update CA certificates
+
+- name: Deploy SSSD configuration
+  ansible.builtin.template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart SSSD
+
+- name: Enable and start SSSD
+  ansible.builtin.systemd_service:
+    name: sssd
+    enabled: true
+    state: started

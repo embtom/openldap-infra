@@ -4,6 +4,7 @@ set -eu
 config_file=/etc/ldap/slapd.d/slapd.conf
 bootstrap_file=/etc/ldap/slapd.d/bootstrap.ldif
 gitlab_bootstrap_file=/etc/ldap/slapd.d/gitlab.ldif
+services_bootstrap_file=/etc/ldap/slapd.d/services.ldif
 samba_domain_bootstrap_file=/etc/ldap/slapd.d/samba-domain.ldif
 database_file=/var/lib/ldap/data.mdb
 
@@ -23,6 +24,10 @@ if [ ! -f "$database_file" ]; then
   if [ -s "$gitlab_bootstrap_file" ]; then
     echo "Importing GitLab bootstrap LDIF."
     slapadd -f "$config_file" -n 1 -l "$gitlab_bootstrap_file"
+  fi
+  if [ -s "$services_bootstrap_file" ]; then
+    echo "Importing services bootstrap LDIF."
+    slapadd -f "$config_file" -n 1 -l "$services_bootstrap_file"
   fi
   if [ -s "$samba_domain_bootstrap_file" ]; then
     echo "Importing Samba domain bootstrap LDIF."

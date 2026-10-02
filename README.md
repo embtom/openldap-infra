@@ -71,7 +71,8 @@ python3 scripts/configure-openldap.py
 ```
 
 The configuration wizard asks whether GitLab LDAP authentication should be
-enabled and creates the local inventory configuration.
+enabled, creates a general services bind account, and writes the local
+inventory configuration.
 
 Deploy the complete stack locally:
 
@@ -91,6 +92,7 @@ Verify the LDAP service, administrator bind, and active schema:
 ./scripts/test-openldap
 ./scripts/test-openldap-admin
 ./scripts/test-openldap-schema
+./scripts/test-services-ldap
 ```
 
 When GitLab LDAP is enabled, also run:
@@ -116,6 +118,8 @@ deployment also prompts for `openldap`, `config`, `service`, or
 | `ansible: lint` | `scripts/ansible-lint` | Check the Ansible code before deployment. |
 | `ansible: configure OpenLDAP` | `python3 scripts/configure-openldap.py` | Create the local configuration and encrypted Vault. Run before the first deployment. |
 | `ansible: run all roles` | `scripts/deploy --host <host>` | Build or obtain images, configure OpenLDAP, and start all enabled services. |
+| `ansible: configure SSSD client` | `python3 scripts/configure-sssd-client.py` | Create the local SSSD client configuration. Run before the first SSSD client deployment. |
+| `ansible: deploy SSSD client` | `scripts/deploy-sssd-client --host <host>` | Configure SSSD on the target host to authenticate against OpenLDAP. |
 | `ansible: run by tag` | `scripts/deploy --host <host> --tag <tag>` | Deploy only one area while iterating. |
 | `ansible: recreate OpenLDAP database` | `scripts/deploy --host <host> --tag config,service --recreate-data` | Delete only LDAP data, then initialize a fresh database. Destructive. |
 | `ansible: fully recreate OpenLDAP` | `scripts/deploy --host <host> --tag config,service --recreate-all` | Delete LDAP data, generated configuration, and schemas before redeploying. Destructive. |
@@ -178,6 +182,7 @@ new directory:
 openldap_config_gitlab:
   enabled: true
   memberof_enabled: true
+  bind_cn: gitlab-bind
 ```
 
 The GitLab bind password is stored in the local Ansible Vault as
@@ -219,6 +224,21 @@ Enabling these values does not alter an existing directory. For an existing
 database, create the bind account and group separately, add authorized members,
 then enable the `memberof` overlay before deploying GitLab.
 
+## Services LDAP Bind Account
+
+OpenLDAP creates a dedicated, read-only LDAP search account for services such
+as SSSD when it initializes a new directory:
+
+```yaml
+openldap_config_services:
+  bind_cn: services-bind
+```
+
+Store `openldap_config_services_bind_password` in the local Ansible Vault.
+This creates `cn=services-bind,ou=Services,<base DN>`, which can be configured
+as SSSD's `ldap_default_bind_dn` or used by another service. As with the other
+bootstrap data, this account is not added to an existing database.
+
 ## Samba Domain
 
 Samba schema support is enabled by default, but a Samba domain is optional. The
@@ -226,6 +246,50 @@ configuration task can bootstrap one for a new database. Provide the domain name
 and the domain SID reported by the Samba server with `net getdomainsid`; LAM
 then uses the `sambaDomain` entry to create Samba users and groups. Enabling
 this feature does not modify an existing database.
+
+## SSSD Client
+
+The `sssd_client` role configures Linux hosts to authenticate against
+OpenLDAP through SSSD, either on the same host as OpenLDAP or on a separate
+(including remote) host.
+
+Create the local SSSD client configuration:
+
+```sh
+python3 scripts/configure-sssd-client.py
+```
+
+The wizard asks for `sssd_client_ldap_host`, the LDAP server's DNS hostname.
+This value **must**:
+
+- be resolvable from the SSSD client host (same-host deployments need a
+  hostname that resolves locally, for example via `/etc/hosts` or DNS;
+  remote deployments need a hostname resolvable over the network/routing
+  used to reach the LDAP host), and
+- match the Common Name or a Subject Alternative Name on the LDAPS
+  certificate configured for OpenLDAP (`openldap_external_host`), since SSSD
+  verifies the server certificate.
+
+Do not use the `openldap` Podman-network alias here: it only resolves
+container-to-container inside OpenLDAP's own Podman network, not on the SSSD
+client host. Unlike the GitLab LDAP integration, this role also must not use
+`host-gateway`, which is a Podman container networking feature, not a
+general-purpose host-side LDAP address.
+
+The wizard writes `sssd_client_ldap_host` to
+`ansible/inventories/group_vars/all/sssd-client.yml`. The role derives the
+connection URI as `sssd_client_ldap_uri: "ldaps://{{ sssd_client_ldap_host }}"`;
+override `sssd_client_ldap_uri` directly only for advanced setups (for
+example, a non-standard port or multiple LDAP URIs).
+
+Deploy the SSSD client:
+
+```sh
+scripts/deploy-sssd-client --host <host>
+```
+
+The client also needs to trust the LDAP server's root CA certificate, which
+the role installs from `pki_root_ca_certificate` on the Ansible controller.
 
 ## Test LDAP
 
@@ -474,6 +538,19 @@ are defaults. Do not store passwords in version control.
 | `pki_intermediate_ca_csr` | `<intermediate dir>/csr/intermediate-ca.csr` | Issuing CA certificate-signing request path. |
 | `pki_intermediate_ca_certificate` | `<intermediate dir>/certs/intermediate-ca.crt` | Issuing CA certificate path. |
 | `pki_server_certificates` | defined by playbook | Certificate request list. Each item requires `name`, `common_name`, and `subject_alt_names`. |
+
+### SSSD Client
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `sssd_client_ldap_host` | required | LDAP server DNS hostname; must match the LDAPS certificate. Set by `scripts/configure-sssd-client.py`. |
+| `sssd_client_ldap_uri` | `ldaps://{{ sssd_client_ldap_host }}` | LDAP connection URI used by SSSD. Override directly for advanced setups. |
+| `sssd_client_search_base` | `openldap_config_base_dn` | LDAP search base for user and group lookups. |
+| `sssd_client_bind_dn` | services bind account | Bind DN used by SSSD to query LDAP. |
+| `sssd_client_bind_password` | services bind password | Bind password used by SSSD to query LDAP. |
+| `sssd_client_ca_certificate` | `/usr/local/share/ca-certificates/openldap-root-ca.crt` | Path where the OpenLDAP root CA certificate is installed on the client. |
+| `sssd_client_mkhomedir_enabled` | `true` | Creates a home directory for LDAP users on first login. |
+| `sssd_client_packages` | `sssd`, `sssd-ldap`, and related packages | Packages installed to support LDAP authentication. |
 
 ## LDAP Account Manager Networking
 

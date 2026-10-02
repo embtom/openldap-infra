@@ -1,0 +1,16 @@
+---
+sssd_client_ldap_host: ""
+sssd_client_ldap_uri: "ldaps://{{ sssd_client_ldap_host }}"
+sssd_client_search_base: dc=embtom,dc=org
+sssd_client_bind_dn: cn=services-bind,ou=Services,dc=embtom,dc=org
+sssd_client_bind_password: ""
+sssd_client_ca_certificate: >-
+  /usr/local/share/ca-certificates/openldap-root-ca.crt
+sssd_client_mkhomedir_enabled: true
+sssd_client_packages:
+  - ca-certificates
+  - libnss-sss
+  - libpam-mkhomedir
+  - libpam-sss
+  - sssd
+  - sssd-ldap
