@@ -289,7 +289,11 @@ scripts/deploy-sssd-client --host <host>
 ```
 
 The client also needs to trust the LDAP server's root CA certificate, which
-the role installs from `pki_root_ca_certificate` on the Ansible controller.
+the role installs from `sssd_client_ca_certificate_source` on the Ansible
+controller.
+It also appends `sss` to the `passwd` and `group` databases in
+`/etc/nsswitch.conf`, preserving the host's existing NSS sources so LDAP
+identities are available to account lookup.
 
 ## Test LDAP
 
@@ -548,6 +552,7 @@ are defaults. Do not store passwords in version control.
 | `sssd_client_search_base` | `openldap_config_base_dn` | LDAP search base for user and group lookups. |
 | `sssd_client_bind_dn` | services bind account | Bind DN used by SSSD to query LDAP. |
 | `sssd_client_bind_password` | services bind password | Bind password used by SSSD to query LDAP. |
+| `sssd_client_ca_certificate_source` | `<home>/.local/share/embtom/pki/certs/root-ca.crt` | Controller-side LDAP root CA source file. |
 | `sssd_client_ca_certificate` | `/usr/local/share/ca-certificates/openldap-root-ca.crt` | Path where the OpenLDAP root CA certificate is installed on the client. |
 | `sssd_client_mkhomedir_enabled` | `true` | Creates a home directory for LDAP users on first login. |
 | `sssd_client_packages` | `sssd`, `sssd-ldap`, and related packages | Packages installed to support LDAP authentication. |

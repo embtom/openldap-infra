@@ -19,6 +19,16 @@
     state: present
     update_cache: true
 
+- name: Enable SSSD NSS lookups
+  ansible.builtin.lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: '^({{ item }}:\s+)(?!.*\bsss\b)(.*)$'
+    line: '\1\2 sss'
+    backrefs: true
+  loop:
+    - passwd
+    - group
+
 - name: Configure home directory creation for SSSD users
   ansible.builtin.lineinfile:
     path: /etc/pam.d/common-session
@@ -31,7 +41,7 @@
 
 - name: Install OpenLDAP root CA certificate
   ansible.builtin.copy:
-    src: "{{ pki_root_ca_certificate }}"
+    src: "{{ sssd_client_ca_certificate_source }}"
     dest: "{{ sssd_client_ca_certificate }}"
     owner: root
     group: root
