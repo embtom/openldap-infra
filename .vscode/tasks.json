@@ -68,6 +68,28 @@
       "problemMatcher": []
     },
     {
+      "label": "ansible: configure SSSD client",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/scripts/configure-sssd-client.py",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ansible: deploy SSSD client",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/deploy-sssd-client --host ${input:remoteHost}",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "ansible: run by tag",
       "type": "shell",
       "command": "${workspaceFolder}/scripts/deploy --host ${input:remoteHost} --tag ${input:roleTag}",

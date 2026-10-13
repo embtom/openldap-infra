@@ -15,6 +15,9 @@
         not openldap_config_gitlab.enabled | bool or
         openldap_config_gitlab.bind_password | length > 0
       - >-
+        not openldap_config_services.enabled | bool or
+        openldap_config_services.bind_password | length > 0
+      - >-
         not openldap_config_samba.domain.enabled | bool or
         openldap_config_samba.enabled | bool
       - >-
@@ -29,8 +32,9 @@
     fail_msg: >-
       Set a non-empty administrator password, a non-root absolute configuration
       directory, at least one organizational unit and index, a GitLab bind
-      password when enabling GitLab LDAP integration, and a valid Samba domain
-      name and SID when enabling Samba domain bootstrap.
+      password when enabling GitLab LDAP integration, a services bind password
+      when enabling service accounts, and a valid Samba domain name and SID
+      when enabling Samba domain bootstrap.
 
 - name: Create OpenLDAP service user
   become: true

@@ -1,0 +1,9 @@
+{% if openldap_config_services.enabled | bool %}
+dn: cn={{ openldap_config_services.bind_cn }},ou=Services,{{ openldap_config_base_dn }}
+objectClass: top
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: {{ openldap_config_services.bind_cn }}
+description: LDAP read-only service bind account
+userPassword: {CRYPT}{{ openldap_config_services.bind_password | password_hash('sha512') }}
+{% endif %}
