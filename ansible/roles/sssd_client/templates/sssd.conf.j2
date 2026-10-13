@@ -1,7 +1,6 @@
 [sssd]
 config_file_version = 2
 debug_level = 0
-services = nss, pam
 domains = LDAP
 
 [domain/LDAP]
@@ -15,4 +14,4 @@ ldap_default_authtok = {{ sssd_client_bind_password }}
 ldap_tls_reqcert = demand
 ldap_tls_cacert = {{ sssd_client_ca_certificate }}
 cache_credentials = true
-enumerate = false
+enumerate = {{ sssd_client_enumerate | bool | ternary('true', 'false') }}

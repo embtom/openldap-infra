@@ -276,11 +276,14 @@ client host. Unlike the GitLab LDAP integration, this role also must not use
 `host-gateway`, which is a Podman container networking feature, not a
 general-purpose host-side LDAP address.
 
-The wizard writes `sssd_client_ldap_host` to
-`ansible/inventories/group_vars/all/sssd-client.yml`. The role derives the
-connection URI as `sssd_client_ldap_uri: "ldaps://{{ sssd_client_ldap_host }}"`;
-override `sssd_client_ldap_uri` directly only for advanced setups (for
-example, a non-standard port or multiple LDAP URIs).
+The wizard writes non-secret SSSD settings and a reference to
+`openldap_config_services_bind_password` to
+`ansible/inventories/group_vars/all/sssd-client.yml`. The password remains in
+the encrypted Vault created by `scripts/configure-openldap.py`. The role
+derives the connection URI as
+`sssd_client_ldap_uri: "ldaps://{{ sssd_client_ldap_host }}"`; override
+`sssd_client_ldap_uri` directly only for advanced setups (for example, a
+non-standard port or multiple LDAP URIs).
 
 Deploy the SSSD client:
 
@@ -293,7 +296,11 @@ the role installs from `sssd_client_ca_certificate_source` on the Ansible
 controller.
 It also appends `sss` to the `passwd` and `group` databases in
 `/etc/nsswitch.conf`, preserving the host's existing NSS sources so LDAP
-identities are available to account lookup.
+identities are available to account lookup. It enables the SSSD PAM profile
+as well, so graphical display managers and other PAM services authenticate
+LDAP users through SSSD. A home directory is created for an LDAP user on
+their first successful login by default. The SSSD NSS and PAM responders use
+systemd socket activation.
 
 ## Test LDAP
 
@@ -551,7 +558,8 @@ are defaults. Do not store passwords in version control.
 | `sssd_client_ldap_uri` | `ldaps://{{ sssd_client_ldap_host }}` | LDAP connection URI used by SSSD. Override directly for advanced setups. |
 | `sssd_client_search_base` | `openldap_config_base_dn` | LDAP search base for user and group lookups. |
 | `sssd_client_bind_dn` | services bind account | Bind DN used by SSSD to query LDAP. |
-| `sssd_client_bind_password` | services bind password | Bind password used by SSSD to query LDAP. |
+| `sssd_client_bind_password` | `{{ openldap_config_services_bind_password }}` | Bind password used by SSSD to query LDAP; keep it in the encrypted Vault. |
+| `sssd_client_enumerate` | `true` | Enumerates LDAP users and groups so graphical login managers can list LDAP users. |
 | `sssd_client_ca_certificate_source` | `<home>/.local/share/embtom/pki/certs/root-ca.crt` | Controller-side LDAP root CA source file. |
 | `sssd_client_ca_certificate` | `/usr/local/share/ca-certificates/openldap-root-ca.crt` | Path where the OpenLDAP root CA certificate is installed on the client. |
 | `sssd_client_mkhomedir_enabled` | `true` | Creates a home directory for LDAP users on first login. |

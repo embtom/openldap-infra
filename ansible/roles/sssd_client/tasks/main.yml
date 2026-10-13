@@ -29,15 +29,16 @@
     - passwd
     - group
 
-- name: Configure home directory creation for SSSD users
-  ansible.builtin.lineinfile:
-    path: /etc/pam.d/common-session
-    regexp: '^session\s+required\s+pam_mkhomedir\.so\b.*$'
-    line: session required pam_mkhomedir.so skel=/etc/skel/ umask=0022
-    insertbefore: '^session\s+optional\s+pam_systemd\.so\b.*$'
-    state: >-
+- name: Configure SSSD PAM profiles
+  ansible.builtin.command:
+    cmd: >-
+      /usr/sbin/pam-auth-update --enable sss
       {{ sssd_client_mkhomedir_enabled | bool |
-         ternary('present', 'absent') }}
+         ternary('mkhomedir', '--disable mkhomedir') }}
+      --force
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  changed_when: false
 
 - name: Install OpenLDAP root CA certificate
   ansible.builtin.copy:
@@ -63,3 +64,15 @@
     name: sssd
     enabled: true
     state: started
+
+- name: Apply updated SSSD configuration
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable SSSD responder socket activation
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - sssd-nss.socket
+    - sssd-pam.socket

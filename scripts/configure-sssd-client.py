@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Interactively configure the SSSD client LDAP endpoint."""
 
-import getpass
 import json
 import subprocess
 import sys
@@ -39,6 +38,18 @@ def read_setting(label: str, default: str) -> str:
     return value or default
 
 
+def read_boolean_setting(label: str, default: bool) -> bool:
+    choices = "Y/n" if default else "y/N"
+    value = input(f"{label} [{choices}]: ").strip().lower()
+    if not value:
+        return default
+    if value in {"y", "yes"}:
+        return True
+    if value in {"n", "no"}:
+        return False
+    raise ValueError(f"{label} must be yes or no.")
+
+
 def write_file_atomically(path: Path, content: str, mode: int) -> None:
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", dir=path.parent, delete=False
@@ -60,11 +71,8 @@ def main() -> int:
         return 0
 
     print(
-        "The LDAP server hostname must be a real DNS name that resolves "
-        "from this client and matches the Subject/SAN of the LDAPS "
-        "certificate. This works whether OpenLDAP runs on this same host "
-        "or on a remote host; do not use the 'openldap' Podman-network "
-        "alias here, and do not use 'host-gateway'."
+        "Use an LDAP hostname that resolves from this client and matches "
+        "the LDAPS certificate. Do not use 'openldap' or 'host-gateway'."
     )
     try:
         ldap_host = read_ldap_host()
@@ -72,9 +80,9 @@ def main() -> int:
         bind_dn = read_setting(
             "LDAP bind DN", f"cn=services-bind,ou=Services,{search_base}"
         )
-        bind_password = getpass.getpass("LDAP bind password: ")
-        if not bind_password:
-            raise ValueError("LDAP bind password must not be empty.")
+        enumerate_users = read_boolean_setting(
+            "Show LDAP users on the graphical login screen", default=True
+        )
     except ValueError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1
@@ -83,7 +91,10 @@ def main() -> int:
         "sssd_client_ldap_host": ldap_host,
         "sssd_client_search_base": search_base,
         "sssd_client_bind_dn": bind_dn,
-        "sssd_client_bind_password": bind_password,
+        "sssd_client_enumerate": enumerate_users,
+        "sssd_client_bind_password": (
+            "{{ openldap_config_services_bind_password }}"
+        ),
     }
     INVENTORY_VARIABLES_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     write_file_atomically(
