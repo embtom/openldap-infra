@@ -3,6 +3,7 @@ FROM debian:trixie
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
+  && apt-get upgrade --yes \
   && apt-get install --no-install-recommends --yes \
   ldap-account-manager \
   locales \
