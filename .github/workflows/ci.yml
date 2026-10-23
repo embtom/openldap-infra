@@ -44,6 +44,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     strategy:
       fail-fast: false
       matrix:
@@ -68,6 +69,33 @@ jobs:
           containerfiles: ${{ matrix.container.containerfile }}
           context: .
           oci: true
+
+      - name: Export image for scanning
+        run: >-
+          podman save
+          --format docker-archive
+          --output image-${{ matrix.container.name }}.tar
+          ${{ steps.build.outputs.image-with-tag }}
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          input: image-${{ matrix.container.name }}.tar
+          format: sarif
+          output: trivy-${{ matrix.container.name }}.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Publish Trivy results
+        if: >-
+          always() &&
+          hashFiles(format('trivy-{0}.sarif', matrix.container.name)) != '' &&
+          !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.container.name }}.sarif
+          category: trivy-${{ matrix.container.name }}
 
       - name: Log in to ghcr.io
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
