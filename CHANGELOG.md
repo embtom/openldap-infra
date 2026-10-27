@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0] - 2026-10-27
+
+### Added
+
+#### SSSD Client Integration
+- SSSD client deployment with LDAP authentication and TLS.
+- LDAP service accounts and access controls for client lookups.
+
+#### Security & CI
+- Trivy container scanning and GitHub code-scanning reports.
+- Ansible/YAML linting and Renovate dependency updates.
+
+### Changed
+
+- Samba bootstrap generates secure SIDs and defaults to `EMBTOM`.
+- Deployments use the latest image tag.
+- Updated CI dependencies and base images.
+
 ## [0.1.0] - 2026-09-20
 
 ### Added
