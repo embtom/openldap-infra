@@ -36,6 +36,10 @@ index           {{ index }}
 {% for index in openldap_config_samba_indexes %}
 index           {{ index }}
 {% endfor %}
+access to attrs=sambaLMPassword,sambaNTPassword,sambaPasswordHistory
+	by dn.exact="cn={{ openldap_config_services.bind_cn }},ou=Services,{{ openldap_config_base_dn }}" read
+	by dn.exact="cn=admin,{{ openldap_config_base_dn }}" write
+	by * none
 {% endif %}
 access to attrs=userPassword
 	by self write
