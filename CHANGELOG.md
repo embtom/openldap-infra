@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] - 2026-11-15
+
+### Added
+
+- Restricted access to Samba password attributes to the services bind account and LDAP administrator.
+
 ## [0.2.0] - 2026-10-27
 
 ### Added
