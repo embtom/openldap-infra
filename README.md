@@ -583,6 +583,25 @@ it contains the CA private keys required to issue trusted certificates. For
 production deployments, pin container image versions and back up both LDAP data
 and PKI state.
 
+### LDAP Account Manager vulnerability monitoring
+
+The LDAP Account Manager security workflow scans the published `latest` image
+daily and creates or updates one issue per HIGH or CRITICAL Debian package
+vulnerability, including vulnerabilities without a fix. It closes the issue
+when a successful scan no longer reports the finding and reopens it if the
+finding returns. A separate daily build uses current Debian packages and fails
+its scan if any fixable HIGH or CRITICAL vulnerabilities remain. Check Actions
+for workflow failures: a failed scan cannot synchronize issues.
+
+The monitor only checks the published `latest` image, not release tags, direct
+builds, or running hosts. To publish refreshed images, run the CI workflow on
+`main`; its existing vulnerability gate must pass. Then redeploy or restart the
+service to pull the new image. For pinned deployments, create a new release and
+deploy its tag; direct-build deployments must rebuild and redeploy separately.
+Configure GitHub issue notifications to receive the alerts. Renovate tracks
+declared dependencies but does not update the Debian packages installed during
+the image build.
+
 ## Development
 
 Run Ansible linting before deployment:
