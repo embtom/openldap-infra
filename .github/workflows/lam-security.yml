@@ -1,0 +1,82 @@
+---
+name: LDAP Account Manager security
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lam-security-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor-published-image:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      issues: write
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Prepare build environment
+        uses: ./.github/actions/setup-podman
+
+      - name: Pull and export published image
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}/ldap-account-manager:latest
+        run: |
+          podman pull "$IMAGE"
+          podman image inspect --format '{{.Digest}}' "$IMAGE" > image-digest.txt
+          podman save --format docker-archive --output published-image.tar "$IMAGE"
+
+      - name: Scan published image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          input: published-image.tar
+          format: json
+          output: published-image.json
+          severity: HIGH,CRITICAL
+          vuln-type: os
+          list-all-pkgs: true
+          ignore-unfixed: false
+          exit-code: "0"
+
+      - name: Synchronize vulnerability issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 scripts/lam-security-issues.py published-image.json
+          "$(cat image-digest.txt)"
+
+  check-fresh-build:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Prepare build environment
+        uses: ./.github/actions/setup-podman
+
+      - name: Build with current Debian packages
+        run: |
+          podman build --pull --no-cache \
+            --tag localhost/ldap-account-manager:security-check \
+            --file container/ldap-account-manager/Containerfile .
+          podman save --format docker-archive --output fresh-image.tar \
+            localhost/ldap-account-manager:security-check
+
+      - name: Scan fresh image for fixable vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          input: fresh-image.tar
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
