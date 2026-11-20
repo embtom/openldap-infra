@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Daily LAM image vulnerability scans with GitHub issue tracking.
+- Daily fresh-image scans for fixable vulnerabilities.
+
+### Fixed
+
+- Restore LAM's packaged language list when it is missing from persistent configuration.
+
 ## [0.2.1] - 2026-11-15
 
 ### Added
