@@ -9,6 +9,8 @@ RUN apt-get update \
   locales \
   nginx \
   php-fpm \
+  && { dpkg --compare-versions "$(dpkg-query -W -f='${Version}' nginx)" ge 1.26.3-3+deb13u11 \
+  || { echo "nginx is older than the Debian security update 1.26.3-3+deb13u11" >&2; exit 1; }; } \
   && sed -i 's/^# \(en_GB.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
   && locale-gen \
   && rm -rf /var/lib/apt/lists/*
@@ -34,6 +36,8 @@ RUN cp -L /etc/ldap-account-manager/config.cfg \
   /usr/local/share/ldap-account-manager-config.cfg \
   && cp /var/lib/ldap-account-manager/config/lam.conf \
   /usr/local/share/ldap-account-manager-profile.conf \
+  && cp /var/lib/ldap-account-manager/config/language \
+  /usr/local/share/ldap-account-manager-language \
   && cp -a /var/lib/ldap-account-manager/config/templates \
   /usr/local/share/ldap-account-manager-templates
 

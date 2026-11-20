@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPOSITORY_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+exec podman build \
+  --tag localhost/ldap-account-manager:trixie \
+  --file "${REPOSITORY_DIR}/container/ldap-account-manager/Containerfile" \
+  "$@" \
+  "${REPOSITORY_DIR}"

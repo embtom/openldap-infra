@@ -10,6 +10,10 @@ if [ ! -f "$config_dir/config.cfg" ]; then
   cp /usr/local/share/ldap-account-manager-config.cfg "$config_dir/config.cfg"
 fi
 
+if [ ! -f "$config_dir/language" ]; then
+  cp /usr/local/share/ldap-account-manager-language "$config_dir/language"
+fi
+
 if [ ! -f "$config_dir/${LAM_PROFILE_NAME}.conf" ]; then
   cp /usr/local/share/ldap-account-manager-profile.conf \
     "$config_dir/${LAM_PROFILE_NAME}.conf"

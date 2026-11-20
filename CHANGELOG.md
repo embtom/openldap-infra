@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Daily LAM image vulnerability scans with GitHub issue tracking.
+- Daily fresh-image scans for fixable vulnerabilities.
+- Local build scripts for the OpenLDAP and LDAP Account Manager images.
+
+### Fixed
+
+- Restore LAM's packaged language list when it is missing from persistent configuration.
+
 ## [0.2.1] - 2026-11-15
 
 ### Added
