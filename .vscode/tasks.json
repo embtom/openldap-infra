@@ -121,6 +121,18 @@
         "focus": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "container: build OpenLDAP image",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/build-openldap",
+      "problemMatcher": []
+    },
+    {
+      "label": "container: build LDAP Account Manager image",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/build-ldap-account-manager",
+      "problemMatcher": []
     }
   ],
   "inputs": [
