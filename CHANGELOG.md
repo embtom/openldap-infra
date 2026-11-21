@@ -1,16 +1,25 @@
 # Changelog
 
-## Unreleased
+## [0.3.0] - 2026-11-21
 
 ### Added
 
-- Daily LAM image vulnerability scans with GitHub issue tracking.
+- Daily vulnerability scans for both published images, with GitHub issue tracking
+  and advisory links.
 - Daily fresh-image scans for fixable vulnerabilities.
-- Local build scripts for the OpenLDAP and LDAP Account Manager images.
+- Local image build and Trivy scan scripts, plus container smoke tests in CI.
+
+### Changed
+
+- Install LAM 9.7 from the verified upstream Debian package on Debian Trixie slim.
+- Use the Debian Backports libcurl package and standalone tmpfiles in the LAM image.
+- Default LAM deployments to a locally built image.
+- Remove unused `mount` and `procps` packages from the OpenLDAP image.
 
 ### Fixed
 
 - Restore LAM's packaged language list when it is missing from persistent configuration.
+- Update the custom `groupOfNames` module for LAM 9.7 compatibility.
 
 ## [0.2.1] - 2026-11-15
 
