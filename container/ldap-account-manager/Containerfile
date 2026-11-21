@@ -1,16 +1,26 @@
-FROM debian:trixie
+FROM debian:trixie-slim
+
+ARG LAM_VERSION=9.7
+ARG LAM_SHA256=eb4f652d97e63ba295cbec536e4bc4b9eb150d752503189eefd50ffeff6825bb
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
   && apt-get upgrade --yes \
   && apt-get install --no-install-recommends --yes \
-  ldap-account-manager \
+  ca-certificates \
+  curl \
   locales \
   nginx \
   php-fpm \
   && { dpkg --compare-versions "$(dpkg-query -W -f='${Version}' nginx)" ge 1.26.3-3+deb13u11 \
   || { echo "nginx is older than the Debian security update 1.26.3-3+deb13u11" >&2; exit 1; }; } \
+  && curl -fsSL --retry 3 -o /tmp/lam.deb \
+  "https://github.com/LDAPAccountManager/lam/releases/download/${LAM_VERSION}/ldap-account-manager_${LAM_VERSION}-1_all.deb" \
+  && echo "${LAM_SHA256}  /tmp/lam.deb" | sha256sum --check --status \
+  && apt-get install --no-install-recommends --yes /tmp/lam.deb \
+  && rm -f /tmp/lam.deb \
+  && apt-get purge --yes --auto-remove curl \
   && sed -i 's/^# \(en_GB.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
   && locale-gen \
   && rm -rf /var/lib/apt/lists/*
@@ -38,8 +48,6 @@ RUN cp -L /etc/ldap-account-manager/config.cfg \
   /usr/local/share/ldap-account-manager-language \
   && cp /var/lib/ldap-account-manager/config/lam.conf \
   /usr/local/share/ldap-account-manager-profile.conf \
-  && cp /var/lib/ldap-account-manager/config/language \
-  /usr/local/share/ldap-account-manager-language \
   && cp -a /var/lib/ldap-account-manager/config/templates \
   /usr/local/share/ldap-account-manager-templates
 

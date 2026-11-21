@@ -7,11 +7,11 @@ class groupOfNames extends baseModule {
         $this->autoAddObjectClasses = false;
     }
 
-    public function can_manage() {
+    public function can_manage(): bool {
         return $this->get_scope() === 'group';
     }
 
-    public function get_metaData() {
+    public function get_metaData(): array {
         return [
             'alias' => _('Access group'),
             'attributes' => ['cn', 'description', 'member'],
@@ -23,7 +23,7 @@ class groupOfNames extends baseModule {
         ];
     }
 
-    public function display_html_attributes() {
+    public function display_html_attributes(): htmlElement|array {
         $return = new htmlResponsiveRow();
         if (!in_array('groupOfNames', $this->attributes['objectClass'] ?? [])) {
             $return->add(new htmlButton(
@@ -52,7 +52,7 @@ class groupOfNames extends baseModule {
         return $return;
     }
 
-    public function process_attributes() {
+    public function process_attributes(): array {
         $errors = [];
         if (isset($_POST['addGroupOfNamesExtension'])) {
             $this->attributes['objectClass'][] = 'groupOfNames';
@@ -87,14 +87,14 @@ class groupOfNames extends baseModule {
         return $errors;
     }
 
-    public function module_complete() {
+    public function module_complete(): bool {
         if (!in_array('groupOfNames', $this->attributes['objectClass'] ?? [])) {
             return true;
         }
         return !empty($this->attributes['cn'][0]) && !empty($this->attributes['member']);
     }
 
-    public function save_attributes() {
+    public function save_attributes(): array {
         if (!in_array('groupOfNames', $this->attributes['objectClass'] ?? [])
             && !in_array('groupOfNames', $this->orig['objectClass'] ?? [])) {
             return [];
