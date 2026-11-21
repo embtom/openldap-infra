@@ -6,8 +6,8 @@ RUN apt-get update \
   && apt-get upgrade --no-install-recommends --yes \
   && apt-get install --no-install-recommends --yes ca-certificates \
   ldap-utils \
-  procps \
   slapd \
+  && apt-get purge --yes --auto-remove mount \
   && rm -rf /var/lib/apt/lists/*
 
 COPY container/openldap/entrypoint.sh /usr/local/bin/openldap-entrypoint

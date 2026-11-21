@@ -78,6 +78,12 @@ jobs:
           context: .
           oci: true
 
+      - name: Smoke test OpenLDAP
+        if: matrix.container.name == 'openldap'
+        env:
+          IMAGE: ${{ steps.build.outputs.image-with-tag }}
+        run: ./scripts/test-openldap-container "$IMAGE"
+
       - name: Smoke test LDAP Account Manager
         if: matrix.container.name == 'ldap-account-manager'
         env:
