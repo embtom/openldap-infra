@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 IMAGE" >&2
+  exit 2
+fi
+
+podman run --rm --interactive --entrypoint /bin/sh \
+  -e LAM_PROFILE_NAME=lam \
+  -e LAM_SERVER_URL=ldaps://openldap:636 \
+  -e LAM_BASE_DN=dc=example,dc=org \
+  -e LAM_LOG_DESTINATION=/var/lib/ldap-account-manager/data/lam.log \
+  "$1" <<'SH'
+set -eu
+mkdir -p /tls
+openssl req -x509 -newkey rsa:2048 -nodes -keyout /tls/private.key \
+  -out /tls/fullchain.crt -days 1 -subj /CN=localhost >/dev/null 2>&1
+/usr/local/bin/ldap-account-manager-entrypoint &
+pid=$!
+trap 'kill "$pid" 2>/dev/null || true' EXIT
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  kill -0 "$pid"
+  if php -r '
+    $context = stream_context_create(["ssl" => [
+      "verify_peer" => false, "verify_peer_name" => false
+    ]]);
+    $body = file_get_contents("https://127.0.0.1/templates/login.php", false, $context);
+    exit($body !== false && stripos($body, "LDAP Account Manager") !== false ? 0 : 1);
+  ' 2>/dev/null; then
+    echo "LAM login page is available over HTTPS"
+    exit 0
+  fi
+  sleep 1
+done
+echo "LAM login page did not become available" >&2
+exit 1
+SH

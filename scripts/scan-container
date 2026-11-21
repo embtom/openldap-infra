@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 IMAGE [TRIVY_OPTIONS...]" >&2
+  exit 2
+fi
+
+image=$1
+shift
+temp_dir="$(mktemp -d)"
+trap 'rm -f -- "$temp_dir/image.tar"; rmdir -- "$temp_dir"' EXIT
+
+podman save --format docker-archive --output "$temp_dir/image.tar" "$image"
+podman run --rm -v "$temp_dir/image.tar:/image.tar:ro" \
+  docker.io/aquasec/trivy:0.70.0 image --input /image.tar \
+  --scanners vuln --vuln-type os --severity HIGH,CRITICAL \
+  --list-all-pkgs "$@"

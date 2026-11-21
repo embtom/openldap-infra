@@ -78,6 +78,12 @@ jobs:
           context: .
           oci: true
 
+      - name: Smoke test LDAP Account Manager
+        if: matrix.container.name == 'ldap-account-manager'
+        env:
+          IMAGE: ${{ steps.build.outputs.image-with-tag }}
+        run: ./scripts/test-lam-container "$IMAGE"
+
       - name: Export image for scanning
         run: >-
           podman save
