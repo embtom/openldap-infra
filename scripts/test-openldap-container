@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 IMAGE" >&2
+  exit 2
+fi
+
+podman run --rm --interactive --network none --entrypoint /bin/sh "$1" <<'SH'
+set -eu
+for package in mount procps; do
+  if dpkg-query -W -f='${db:Status-Status}' "$package" 2>/dev/null | grep -qx installed; then
+    echo "Unexpected package in OpenLDAP image: $package" >&2
+    exit 1
+  fi
+done
+
+mkdir -p /etc/ldap/slapd.d /run/slapd /var/lib/ldap
+openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/ldap.key \
+  -out /tmp/ldap.crt -days 1 -subj /CN=localhost \
+  -addext subjectAltName=IP:127.0.0.1 >/dev/null 2>&1
+cat > /etc/ldap/slapd.d/slapd.conf <<'EOF'
+include /etc/ldap/schema/core.schema
+pidfile /run/slapd/slapd.pid
+argsfile /run/slapd/slapd.args
+modulepath /usr/lib/ldap
+moduleload back_mdb
+TLSCertificateFile /tmp/ldap.crt
+TLSCertificateKeyFile /tmp/ldap.key
+database mdb
+suffix "dc=example,dc=org"
+rootdn "cn=admin,dc=example,dc=org"
+rootpw test-fixture-password
+directory /var/lib/ldap
+EOF
+cat > /etc/ldap/slapd.d/bootstrap.ldif <<'EOF'
+dn: dc=example,dc=org
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+dc: example
+o: Example
+EOF
+
+pid=''
+trap '[ -z "$pid" ] || kill "$pid" 2>/dev/null || true' EXIT
+for iteration in first restart; do
+  /usr/local/bin/openldap-entrypoint &
+  pid=$!
+  ready=false
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 "$pid"
+    if LDAPTLS_REQCERT=demand LDAPTLS_CACERT=/tmp/ldap.crt \
+      ldapwhoami -x -H ldaps://127.0.0.1:636 \
+      -D cn=admin,dc=example,dc=org -w test-fixture-password >/dev/null 2>/tmp/ldapwhoami.err; then
+      ready=true
+      break
+    fi
+    sleep 1
+  done
+  if [ "$ready" != true ]; then
+    echo "LDAPS did not become available" >&2
+    cat /tmp/ldapwhoami.err >&2
+    exit 1
+  fi
+  ldapsearch -x -H ldap://127.0.0.1:389 -b dc=example,dc=org -s base \
+    '(objectClass=*)' dn | grep -q '^dn: dc=example,dc=org$'
+  kill "$pid"
+  wait "$pid" || true
+  pid=''
+  echo 'not a valid bootstrap' > /etc/ldap/slapd.d/bootstrap.ldif
+  echo "LDAP/LDAPS $iteration passed"
+done
+SH
