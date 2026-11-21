@@ -5,6 +5,9 @@ ARG LAM_SHA256=eb4f652d97e63ba295cbec536e4bc4b9eb150d752503189eefd50ffeff6825bb
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY container/ldap-account-manager/trixie-backports.sources /etc/apt/sources.list.d/trixie-backports.sources
+
+# PHP-FPM needs systemd-tmpfiles, not the systemd service manager.
 RUN apt-get update \
   && apt-get upgrade --yes \
   && apt-get install --no-install-recommends --yes \
@@ -13,12 +16,12 @@ RUN apt-get update \
   locales \
   nginx \
   php-fpm \
-  && { dpkg --compare-versions "$(dpkg-query -W -f='${Version}' nginx)" ge 1.26.3-3+deb13u11 \
-  || { echo "nginx is older than the Debian security update 1.26.3-3+deb13u11" >&2; exit 1; }; } \
+  systemd-standalone-tmpfiles \
   && curl -fsSL --retry 3 -o /tmp/lam.deb \
   "https://github.com/LDAPAccountManager/lam/releases/download/${LAM_VERSION}/ldap-account-manager_${LAM_VERSION}-1_all.deb" \
   && echo "${LAM_SHA256}  /tmp/lam.deb" | sha256sum --check --status \
   && apt-get install --no-install-recommends --yes /tmp/lam.deb \
+  && apt-get install --no-install-recommends --yes -t trixie-backports libcurl4t64 \
   && rm -f /tmp/lam.deb \
   && apt-get purge --yes --auto-remove curl \
   && sed -i 's/^# \(en_GB.UTF-8 UTF-8\)/\1/' /etc/locale.gen \

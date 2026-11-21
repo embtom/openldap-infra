@@ -13,6 +13,21 @@ podman run --rm --interactive --entrypoint /bin/sh \
   -e LAM_LOG_DESTINATION=/var/lib/ldap-account-manager/data/lam.log \
   "$1" <<'SH'
 set -eu
+if dpkg-query -W -f='${db:Status-Status}' systemd 2>/dev/null | grep -qx installed; then
+  echo "The systemd package must not be installed in the LAM container" >&2
+  exit 1
+fi
+nginx_version="$(dpkg-query -W -f='${Version}' nginx)"
+if ! dpkg --compare-versions "$nginx_version" ge 1.26.3-3+deb13u11; then
+  echo "nginx is older than the Debian security update 1.26.3-3+deb13u11" >&2
+  exit 1
+fi
+curl_version="$(dpkg-query -W -f='${Version}' libcurl4t64)"
+if ! dpkg --compare-versions "$curl_version" ge '8.21.0~'; then
+  echo "libcurl must be at least version 8.21.0" >&2
+  exit 1
+fi
+php -r 'exit(version_compare(curl_version()["version"], "8.21.0", ">=") ? 0 : 1);'
 mkdir -p /tls
 openssl req -x509 -newkey rsa:2048 -nodes -keyout /tls/private.key \
   -out /tls/fullchain.crt -days 1 -subj /CN=localhost >/dev/null 2>&1
