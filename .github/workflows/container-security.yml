@@ -1,5 +1,5 @@
 ---
-name: Container image security
+name: Container security
 
 on:
   schedule:
@@ -20,11 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - name: ldap-account-manager
-            containerfile: container/ldap-account-manager/Containerfile
-          - name: openldap
-            containerfile: container/openldap/Containerfile
+        image: [openldap, ldap-account-manager]
     permissions:
       contents: read
       issues: write
@@ -37,14 +33,14 @@ jobs:
 
       - name: Pull and export published image
         env:
-          IMAGE: ghcr.io/${{ github.repository }}/${{ matrix.image.name }}:latest
+          IMAGE: ghcr.io/${{ github.repository }}/${{ matrix.image }}:latest
         run: |
           podman pull "$IMAGE"
           podman image inspect --format '{{.Digest}}' "$IMAGE" > image-digest.txt
           podman save --format docker-archive --output published-image.tar "$IMAGE"
 
-      - name: Scan published ${{ matrix.image.name }} image
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      - name: Scan published image
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           input: published-image.tar
           format: json
@@ -61,8 +57,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
           IMAGE_NAME: ${{ matrix.image.name }}
         run: >-
-          python3 scripts/lam-security-issues.py published-image.json
-          "$(cat image-digest.txt)" "$IMAGE_NAME"
+          python3 scripts/container-security-issues.py published-image.json
+          "$(cat image-digest.txt)" "${{ matrix.image }}"
 
   check-fresh-build:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
@@ -70,11 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - name: ldap-account-manager
-            containerfile: container/ldap-account-manager/Containerfile
-          - name: openldap
-            containerfile: container/openldap/Containerfile
+        image: [openldap, ldap-account-manager]
     steps:
       - uses: actions/checkout@v7
 
@@ -84,13 +76,13 @@ jobs:
       - name: Build ${{ matrix.image.name }} with current Debian packages
         run: |
           podman build --pull --no-cache \
-            --tag localhost/${{ matrix.image.name }}:security-check \
-            --file ${{ matrix.image.containerfile }} .
+            --tag localhost/${{ matrix.image }}:security-check \
+            --file container/${{ matrix.image }}/Containerfile .
           podman save --format docker-archive --output fresh-image.tar \
-            localhost/${{ matrix.image.name }}:security-check
+            localhost/${{ matrix.image }}:security-check
 
       - name: Scan fresh image for fixable vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           input: fresh-image.tar
           format: table

@@ -34,6 +34,8 @@ RUN mkdir -p /var/lib/ldap-account-manager/config \
 # Preserve package defaults as seeds for an initially empty config volume.
 RUN cp -L /etc/ldap-account-manager/config.cfg \
   /usr/local/share/ldap-account-manager-config.cfg \
+  && cp /var/lib/ldap-account-manager/config/language \
+  /usr/local/share/ldap-account-manager-language \
   && cp /var/lib/ldap-account-manager/config/lam.conf \
   /usr/local/share/ldap-account-manager-profile.conf \
   && cp /var/lib/ldap-account-manager/config/language \

@@ -583,15 +583,17 @@ it contains the CA private keys required to issue trusted certificates. For
 production deployments, pin container image versions and back up both LDAP data
 and PKI state.
 
-### LDAP Account Manager vulnerability monitoring
+### Container vulnerability monitoring
 
-The LDAP Account Manager security workflow scans the published `latest` image
-daily and creates or updates one issue per HIGH or CRITICAL Debian package
-vulnerability, including vulnerabilities without a fix. It closes the issue
-when a successful scan no longer reports the finding and reopens it if the
-finding returns. A separate daily build uses current Debian packages and fails
-its scan if any fixable HIGH or CRITICAL vulnerabilities remain. Check Actions
-for workflow failures: a failed scan cannot synchronize issues.
+The container security workflow scans both published `latest` images daily.
+For each image, it creates individual issues for HIGH or CRITICAL
+vulnerabilities with fixes and groups packages without fixes in one issue.
+The grouped issue includes links to matching GitHub security advisories when
+available.
+It closes issues when a successful scan no longer reports the findings and
+reopens them if they return. Separate daily builds use current Debian packages
+and fail their scans if fixable HIGH or CRITICAL vulnerabilities remain. Check
+Actions for workflow failures: a failed scan cannot synchronize issues.
 
 The monitor only checks the published `latest` image, not release tags, direct
 builds, or running hosts. To publish refreshed images, run the CI workflow on
@@ -608,6 +610,12 @@ Run Ansible linting before deployment:
 
 ```sh
 scripts/ansible-lint
+```
+
+Run the container security monitor tests with pytest installed:
+
+```sh
+scripts/test-container-security
 ```
 
 Container images can be built directly from the repository using the
