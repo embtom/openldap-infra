@@ -1,5 +1,6 @@
 FROM debian:trixie-slim
 
+# Renovate updates the release and its Debian package checksum together.
 ARG LAM_VERSION=9.7
 ARG LAM_SHA256=eb4f652d97e63ba295cbec536e4bc4b9eb150d752503189eefd50ffeff6825bb
 
