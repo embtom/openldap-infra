@@ -602,7 +602,8 @@ service to pull the new image. For pinned deployments, create a new release and
 deploy its tag; direct-build deployments must rebuild and redeploy separately.
 Configure GitHub issue notifications to receive the alerts. Renovate tracks
 declared dependencies but does not update the Debian packages installed during
-the image build.
+the image build. Renovate tracks stable LDAP Account Manager releases and
+updates the pinned Debian package version and SHA-256 together.
 
 ## Development
 

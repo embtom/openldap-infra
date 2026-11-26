@@ -2,5 +2,20 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the LDAP Account Manager package and checksum",
+      "managerFilePatterns": [
+        "/^container/ldap-account-manager/Containerfile$/"
+      ],
+      "matchStrings": [
+        "ARG LAM_VERSION=(?<currentValue>[^\\s]+)\\r?\\nARG LAM_SHA256=(?<currentDigest>[a-f0-9]{64})"
+      ],
+      "depNameTemplate": "LDAPAccountManager/lam",
+      "datasourceTemplate": "github-release-attachments",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?$"
+    }
   ]
 }
